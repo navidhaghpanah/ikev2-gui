@@ -48,9 +48,26 @@ detect_ip() {
   curl -4 -fsS --max-time 8 https://ifconfig.me 2>/dev/null || true
 }
 
+need=(
+  "$SCRIPT_DIR/panel/app.py"
+  "$SCRIPT_DIR/panel/templates/login.html"
+  "$SCRIPT_DIR/panel/templates/index.html"
+  "$SCRIPT_DIR/panel/templates/settings.html"
+  "$SCRIPT_DIR/panel/static/style.css"
+  "$SCRIPT_DIR/panel/ikev2-l2tp-gui.service"
+  "$SCRIPT_DIR/panel/ppp-ip-up"
+  "$SCRIPT_DIR/panel/ppp-ip-down"
+)
+for f in "${need[@]}"; do
+  if [[ ! -f "$f" ]]; then
+    echo "missing file: $f"
+    exit 1
+  fi
+done
+
 echo
 echo "=========================================="
-echo "   IKEv2 & L2TP GUI  —  nasb"
+echo "   IKEv2 & L2TP GUI  —  installer"
 echo "=========================================="
 echo
 
@@ -61,8 +78,8 @@ IFACE="${IFACE:-eth0}"
 DOMAIN="${DOMAIN:-$(ask 'Domain (mesle vpn.example.com)' '')}"
 PUBLIC_IP="${PUBLIC_IP:-$(ask 'IP omumi server' "$PUB_GUESS")}"
 EMAIL="${EMAIL:-$(ask 'Email baraye Lets Encrypt (khaali = bedune email)' '')}"
-PSK="${PSK:-$(ask 'PSK / Secret L2TP (hadaghal 8 character)' 'ChangeThisPSK')}"
-PANEL_USER="${PANEL_USER:-$(ask 'User vorud panel' 'admin')}"
+PSK="${PSK:-$(ask 'PSK / Secret L2TP (hadaghal 8 character)' '')}"
+PANEL_USER="${PANEL_USER:-$(ask 'User vorud panel' '')}"
 if [[ -n "${PANEL_PASS:-}" ]]; then
   :
 else
@@ -381,8 +398,6 @@ EOF
 fi
 ln -sfn /etc/nginx/sites-available/ikev2-l2tp-gui /etc/nginx/sites-enabled/ikev2-l2tp-gui
 rm -f /etc/nginx/sites-enabled/default
-# old panel
-systemctl disable --now vpn-panel 2>/dev/null || true
 
 cp "$APP_DIR/ikev2-l2tp-gui.service" /etc/systemd/system/ikev2-l2tp-gui.service
 systemctl daemon-reload

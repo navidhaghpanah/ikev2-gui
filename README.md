@@ -40,9 +40,9 @@ sudo DOMAIN=vpn.example.com \
   PUBLIC_IP=1.2.3.4 \
   PSK=YourLongPskHere \
   PANEL_USER=admin \
-  PANEL_PASS='secret' \
-  VPN_USER=navid \
-  VPN_PASS='0114' \
+  PANEL_PASS='ChangeMe' \
+  VPN_USER=user1 \
+  VPN_PASS='ChangeMe' \
   NONINTERACTIVE=1 \
   bash install.sh
 ```
