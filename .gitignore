@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+admin.json
+config.json
+users.json
+traffic-snap.json
+*.tmp
+.DS_Store

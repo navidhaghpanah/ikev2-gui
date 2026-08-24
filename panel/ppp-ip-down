@@ -1,0 +1,11 @@
+#!/bin/bash
+mkdir -p /var/lib/ikev2-l2tp-gui
+STAT_RX=0
+STAT_TX=0
+if [ -n "$IFNAME" ] && [ -f "/sys/class/net/${IFNAME}/statistics/rx_bytes" ]; then
+  STAT_RX=$(cat "/sys/class/net/${IFNAME}/statistics/rx_bytes" 2>/dev/null || echo 0)
+  STAT_TX=$(cat "/sys/class/net/${IFNAME}/statistics/tx_bytes" 2>/dev/null || echo 0)
+fi
+echo "${PEERNAME:-?} ${IPREMOTE:-?} ${STAT_RX} ${STAT_TX} $(date +%s)" >> /var/lib/ikev2-l2tp-gui/ppp-acct.log
+rm -f "/var/run/ikev2-l2tp-gui/${IFNAME}"
+exit 0

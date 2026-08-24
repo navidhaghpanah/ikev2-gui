@@ -1,0 +1,4 @@
+#!/bin/bash
+mkdir -p /var/run/ikev2-l2tp-gui
+echo "${PEERNAME:-?} ${IPREMOTE:-?} $(date +%s)" > "/var/run/ikev2-l2tp-gui/${IFNAME}"
+exit 0

@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>داشبورد — IKEv2 و L2TP</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700;800&display=swap">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <aside>
+    <div class="mark">VPN</div>
+    <div class="aside-meta">
+      <strong>IKEv2 و L2TP</strong>
+      <span>{{ host }}</span>
+    </div>
+    <nav>
+      <a class="on" href="/">داشبورد</a>
+      <a href="{{ url_for('settings') }}">تنظیمات</a>
+    </nav>
+    <a class="logout" href="{{ url_for('logout') }}">خروج</a>
+  </aside>
+  <main>
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        {% for m in messages %}<div class="alert ok">{{ m }}</div>{% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <header class="top">
+      <div>
+        <h1>داشبورد</h1>
+        <p class="muted">الان: <span id="clock">{{ now_fa }}</span></p>
+      </div>
+      <div class="chips">
+        <span class="chip">سرور <code>{{ host }}</code></span>
+        <span class="chip">مدت روشن بودن {{ uptime_h }}</span>
+      </div>
+    </header>
+
+    <section class="stats five">
+      <article>
+        <span>آنلاین</span>
+        <strong id="stat-online">{{ online_count }}</strong>
+      </article>
+      <article>
+        <span>کل کاربران</span>
+        <strong>{{ total }}</strong>
+      </article>
+      <article>
+        <span>پردازنده</span>
+        <strong id="stat-cpu">{{ cpu_fa }}٪</strong>
+        <div class="bar"><i id="bar-cpu" style="width:{{ stats.cpu }}%"></i></div>
+      </article>
+      <article>
+        <span>حافظه RAM</span>
+        <strong id="stat-ram">{{ mem_fa }}٪</strong>
+        <small class="muted">{{ mem_used_h }} از {{ mem_total_h }}</small>
+        <div class="bar"><i id="bar-ram" style="width:{{ stats.mem_pct }}%"></i></div>
+      </article>
+      <article>
+        <span>بار سیستم</span>
+        <strong>{{ load_fa }}</strong>
+        <small class="muted">دیسک {{ disk_fa }}٪</small>
+      </article>
+    </section>
+
+    <section class="card">
+      <h2>افراد آنلاین</h2>
+      <div id="online-list" class="online-list">
+        {% if online %}
+          {% for n in online %}
+            <span class="person"><span class="dot on"></span>{{ n }}</span>
+          {% endfor %}
+        {% else %}
+          <p class="muted">الان کسی وصل نیست.</p>
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>نشست‌های فعال</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>کاربر</th>
+              <th>نوع</th>
+              <th>آی‌پی داخلی</th>
+              <th>آی‌پی اینترنت</th>
+              <th>مدت</th>
+              <th>ترافیک این نشست</th>
+            </tr>
+          </thead>
+          <tbody id="sessions-body">
+            {% if sessions %}
+              {% for s in sessions %}
+              <tr>
+                <td><strong>{{ s.user or '—' }}</strong></td>
+                <td><span class="tag {{ 'ike' if s.proto == 'IKEv2' else 'l2' }}">{{ s.proto }}</span></td>
+                <td><code>{{ s.vip or '—' }}</code></td>
+                <td><code>{{ s.remote or '—' }}</code></td>
+                <td>{{ s.uptime or '—' }}</td>
+                <td>↓ {{ s.out_h }} · ↑ {{ s.in_h }}</td>
+              </tr>
+              {% endfor %}
+            {% else %}
+              <tr><td colspan="6" class="muted">نشست فعالی نیست.</td></tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>افزودن کاربر</h2>
+      <form method="post" action="{{ url_for('users_add') }}" class="row-form">
+        <label>نام کاربری<input name="name" placeholder="مثلا navid11" required></label>
+        <label>رمز عبور<input name="password" placeholder="حداقل ۴ نویسه" required></label>
+        <label>تاریخ انقضا<input name="expires" type="date"></label>
+        <label>حجم (گیگابایت)<input name="quota_gb" type="number" min="0" step="0.1" value="0" title="۰ یعنی نامحدود"></label>
+        <button type="submit">افزودن</button>
+      </form>
+      <p class="hint">تاریخ خالی = بدون انقضا · حجم ۰ = نامحدود · کاربر برای IKEv2 و L2TP ساخته می‌شود.</p>
+    </section>
+
+    <section class="card">
+      <h2>همه کاربران</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>وضعیت</th>
+              <th>کاربر</th>
+              <th>رمز</th>
+              <th>انقضا</th>
+              <th>حجم</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for u in users %}
+            <tr>
+              <td>
+                {% if u.block %}
+                  <span class="dot bad"></span>{{ u.block }}
+                {% elif u.online %}
+                  <span class="dot on"></span>آنلاین
+                  {% if u.proto %}<span class="tag {{ 'ike' if u.proto == 'IKEv2' else 'l2' }}">{{ u.proto }}</span>{% endif %}
+                {% else %}
+                  <span class="dot"></span>آفلاین
+                {% endif %}
+              </td>
+              <td><strong>{{ u.name }}</strong></td>
+              <td><code>{{ u.password }}</code></td>
+              <td>{{ u.expires or 'نامحدود' }}</td>
+              <td>{{ u.used_h }} / {{ u.quota_h }}</td>
+              <td class="actions">
+                <form method="post" action="{{ url_for('users_update') }}" class="inline">
+                  <input type="hidden" name="name" value="{{ u.name }}">
+                  <input name="password" placeholder="رمز جدید">
+                  <input name="expires" type="date" value="{{ u.expires }}">
+                  <input name="quota_gb" type="number" min="0" step="0.1" value="{{ u.quota_gb }}" style="width:90px" title="حجم گیگابایت">
+                  <label class="chk"><input type="checkbox" name="reset_traffic" value="1"> صفر کردن حجم</label>
+                  <button type="submit" class="ghost sm">ذخیره</button>
+                </form>
+                <form method="post" action="{{ url_for('users_delete') }}" class="inline" onsubmit="return confirm('حذف {{ u.name }}؟')">
+                  <input type="hidden" name="name" value="{{ u.name }}">
+                  <button type="submit" class="danger sm">حذف</button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+  <script>
+    const fa = s => String(s).replace(/\d/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
+    setInterval(async () => {
+      try {
+        const r = await fetch('/api/status');
+        if (!r.ok) return;
+        const d = await r.json();
+        document.getElementById('stat-online').textContent = fa(d.online_count);
+        document.getElementById('stat-cpu').textContent = fa(d.cpu) + '٪';
+        document.getElementById('stat-ram').textContent = fa(d.mem_pct) + '٪';
+        document.getElementById('bar-cpu').style.width = d.cpu + '%';
+        document.getElementById('bar-ram').style.width = d.mem_pct + '%';
+        document.getElementById('clock').textContent = d.now_fa;
+        const box = document.getElementById('online-list');
+        if (d.online.length) {
+          box.innerHTML = d.online.map(n => '<span class="person"><span class="dot on"></span>' + n + '</span>').join('');
+        } else {
+          box.innerHTML = '<p class="muted">الان کسی وصل نیست.</p>';
+        }
+      } catch (e) {}
+    }, 5000);
+  </script>
+</body>
+</html>

@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>تنظیمات — IKEv2 و L2TP</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700;800&display=swap">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <aside>
+    <div class="mark">VPN</div>
+    <div class="aside-meta">
+      <strong>IKEv2 و L2TP</strong>
+      <span>{{ host }}</span>
+    </div>
+    <nav>
+      <a href="/">داشبورد</a>
+      <a class="on" href="{{ url_for('settings') }}">تنظیمات</a>
+    </nav>
+    <a class="logout" href="{{ url_for('logout') }}">خروج</a>
+  </aside>
+  <main>
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        {% for m in messages %}<div class="alert ok">{{ m }}</div>{% endfor %}
+      {% endif %}
+    {% endwith %}
+    <header class="top">
+      <div>
+        <h1>تنظیمات</h1>
+        <p class="muted">کلید مشترک، DNS و رمز پنل</p>
+      </div>
+    </header>
+
+    <section class="grid-2">
+      <div class="card">
+        <h2>کلید مشترک L2TP (PSK)</h2>
+        <form method="post" action="{{ url_for('settings_psk') }}" class="stack">
+          <label>کلید فعلی</label>
+          <input name="psk" value="{{ psk }}" required minlength="8">
+          <p class="hint">بعد از تغییر، گوشی‌هایی که L2TP دارند باید Secret جدید بزنند. IKEv2 با PSK کار نمی‌کند.</p>
+          <button type="submit">ذخیره PSK</button>
+        </form>
+      </div>
+      <div class="card">
+        <h2>DNS تونل</h2>
+        <form method="post" action="{{ url_for('settings_dns') }}" class="stack">
+          <label>سرورهای DNS (با ویرگول)</label>
+          <input name="dns" value="{{ dns }}" required>
+          <p class="hint">برای اتصال‌های بعدی اعمال می‌شود.</p>
+          <button type="submit" class="ghost">ذخیره DNS</button>
+        </form>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>رمز ورود پنل</h2>
+      <form method="post" action="{{ url_for('settings_admin') }}" class="stack" style="max-width:420px">
+        <label>مدیر: {{ admin_user }}</label>
+        <input name="password" type="password" placeholder="رمز جدید پنل" required minlength="4">
+        <button type="submit" class="ghost">تغییر رمز پنل</button>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>راهنمای اتصال</h2>
+      <div class="help">
+        <p><strong>IKEv2 (آیفون — پیشنهادی)</strong></p>
+        <ul>
+          <li>نوع: IKEv2</li>
+          <li>سرور و Remote ID: <code>{{ host }}</code></li>
+          <li>Local ID خالی · Certificate: None</li>
+          <li>نام کاربری و رمز همان کاربر پنل</li>
+        </ul>
+        <p><strong>L2TP</strong></p>
+        <ul>
+          <li>نوع: L2TP</li>
+          <li>سرور: <code>{{ host }}</code></li>
+          <li>Secret / PSK: <code>{{ psk }}</code></li>
+          <li>Send All Traffic روشن</li>
+        </ul>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
