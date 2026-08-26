@@ -203,7 +203,10 @@ def user_blocked(u):
     return ""
 
 
-def write_secrets(users, psk=None, public_ip=None, domain=None):
+def write_secrets(users=None, psk=None, public_ip=None, domain=None):
+    # Always read users.json from disk. A stale in-memory copy (traffic
+    # collector) must not wipe a user that was just added in the panel.
+    users = load_users()
     cfg = load_config()
     psk = psk if psk is not None else cfg.get("psk", "")
     public_ip = public_ip or cfg.get("public_ip", "")
@@ -308,37 +311,37 @@ def parse_sessions():
 
 
 def sample_traffic():
-    users = load_users()
-    snap = load_json(SNAP_FILE, {})
     sessions = parse_sessions()
-    new_snap = {}
-    changed = False
-    for s in sessions:
-        name = s.get("user") or ""
-        if name not in users:
-            continue
-        total = int(s.get("bytes_total") or 0)
-        key = "%s:%s:%s" % (name, s.get("proto"), s.get("id"))
-        prev = int(snap.get(key, 0))
-        if total >= prev:
-            delta = total - prev
-        else:
-            delta = total
-        if delta > 0:
-            users[name]["used_bytes"] = int(users[name].get("used_bytes") or 0) + delta
-            changed = True
-        new_snap[key] = total
-    if changed:
-        save_users(users)
-    save_json(SNAP_FILE, new_snap)
-    blocked_now = False
-    for name, u in users.items():
-        if user_blocked(u) and u.get("enabled", True):
-            # keep enabled flag, blocked by date/quota
-            blocked_now = True
-    if blocked_now or changed:
-        write_secrets(users)
-    return users, sessions
+    with _lock:
+        users = load_users()
+        snap = load_json(SNAP_FILE, {})
+        new_snap = {}
+        changed = False
+        for s in sessions:
+            name = s.get("user") or ""
+            if name not in users:
+                continue
+            total = int(s.get("bytes_total") or 0)
+            key = "%s:%s:%s" % (name, s.get("proto"), s.get("id"))
+            prev = int(snap.get(key, 0))
+            if total >= prev:
+                delta = total - prev
+            else:
+                delta = total
+            if delta > 0:
+                users[name]["used_bytes"] = int(users[name].get("used_bytes") or 0) + delta
+                changed = True
+            new_snap[key] = total
+        if changed:
+            save_users(users)
+        save_json(SNAP_FILE, new_snap)
+        blocked_now = False
+        for name, u in users.items():
+            if user_blocked(u) and u.get("enabled", True):
+                blocked_now = True
+        if blocked_now or changed:
+            write_secrets()
+        return users, sessions
 
 
 def host_stats():
