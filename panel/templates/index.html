@@ -113,6 +113,16 @@
     </section>
 
     <section class="card">
+      <h2>دانلود کلاینت</h2>
+      <p class="muted">دامنه داخل فایل‌ها جایگزین شده. یوزر و پس را خود مشتری موقع وصل وارد می‌کند.</p>
+      <div class="dl-row">
+        <a class="btn" href="{{ url_for('clients_windows') }}">ویندوز — zip نصب</a>
+        <a class="btn ghost" href="{{ url_for('clients_ios') }}">آیفون — پروفایل</a>
+      </div>
+      <p class="hint">ویندوز: zip را باز کنید، <code>Install-IKEv2.bat</code> را با Administrator اجرا کنید. آیفون: فایل را باز کنید → Settings → Profile Downloaded → Install. اندروید: strongSwan، نوع IKEv2 EAP، سرور <code>{{ host }}</code>.</p>
+    </section>
+
+    <section class="card">
       <h2>افزودن کاربر</h2>
       <form method="post" action="{{ url_for('users_add') }}" class="row-form">
         <label>نام کاربری<input name="name" placeholder="مثلا user1" required></label>

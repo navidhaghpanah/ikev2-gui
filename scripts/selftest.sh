@@ -31,18 +31,35 @@ panel/static/style.css
 panel/ppp-ip-up
 panel/ppp-ip-down
 panel/ikev2-l2tp-gui.service
+clients/windows/Install-IKEv2.ps1
+clients/windows/Install-IKEv2.bat
+clients/windows/Check-Windows.bat
+clients/windows/RAHNAMA.txt
+clients/ios/IKEv2.mobileconfig
+clients/ios/RAHNAMA.txt
+clients/README.md
 EOF
 
 echo "== no provider / host leftovers"
-if grep -RInE 'arvan|130\.185|nhaghbayanpsk|arv\.nhaghbayan|HpBayan|eu-west|\b0114\b' --include='*.sh' --include='*.py' --include='*.md' --include='*.html' --include='*.css' --include='*.service' "$ROOT" | grep -v selftest.sh; then
+if grep -RInE 'arvan|130\.185|nhaghbayanpsk|arv\.nhaghbayan|HpBayan|eu-west|\b0114\b' --include='*.sh' --include='*.py' --include='*.md' --include='*.html' --include='*.css' --include='*.service' --include='*.ps1' --include='*.bat' --include='*.txt' --include='*.mobileconfig' "$ROOT" | grep -v selftest.sh; then
   bad "found host-specific strings"
 else
   ok "no host-specific strings"
 fi
-if grep -RInE '(^|[^a-z])navid([^a-z]|$)|navid[0-9]' --include='*.sh' --include='*.py' --include='*.md' --include='*.html' --include='*.css' --include='*.service' "$ROOT" | grep -v selftest.sh | grep -v navidhaghpanah; then
+if grep -RInE '(^|[^a-z])navid([^a-z]|$)|navid[0-9]' --include='*.sh' --include='*.py' --include='*.md' --include='*.html' --include='*.css' --include='*.service' --include='*.ps1' --include='*.bat' --include='*.txt' --include='*.mobileconfig' "$ROOT" | grep -v selftest.sh | grep -v navidhaghpanah; then
   bad "found vpn username leftovers"
 else
   ok "no vpn username leftovers"
+fi
+if grep -q '__DOMAIN__' "$ROOT/clients/windows/Install-IKEv2.ps1" && grep -q '__DOMAIN__' "$ROOT/clients/ios/IKEv2.mobileconfig"; then
+  ok "client templates have __DOMAIN__"
+else
+  bad "client templates missing __DOMAIN__"
+fi
+if grep -q '__VPN_UUID__' "$ROOT/clients/ios/IKEv2.mobileconfig" && grep -q '__PAYLOAD_UUID__' "$ROOT/clients/ios/IKEv2.mobileconfig"; then
+  ok "ios template has UUID placeholders"
+else
+  bad "ios template missing UUID placeholders"
 fi
 
 echo "== python compile"
@@ -117,9 +134,40 @@ PY
 fi
 
 echo "== Farsi UI strings"
-for s in 'داشبورد' 'افراد آنلاین' 'پردازنده' 'حافظه' 'تاریخ انقضا' 'کلید مشترک' 'ورود'; do
+for s in 'داشبورد' 'افراد آنلاین' 'پردازنده' 'حافظه' 'تاریخ انقضا' 'کلید مشترک' 'ورود' 'دانلود کلاینت'; do
   if grep -q "$s" "$ROOT/panel/templates/"*.html; then ok "ui: $s"; else bad "ui missing $s"; fi
 done
+
+echo "== client stamp"
+if command -v python3 >/dev/null; then
+  python3 - << PY
+from pathlib import Path
+import uuid, sys, os
+raw = r"$ROOT"
+root = Path(raw)
+ps1p = root / "clients/windows/Install-IKEv2.ps1"
+if not ps1p.is_file() and raw.startswith("/") and len(raw) > 3 and raw[2] == "/":
+    root = Path(raw[1].upper() + ":" + raw[2:])
+    ps1p = root / "clients/windows/Install-IKEv2.ps1"
+if not ps1p.is_file():
+    print("  skip client stamp path")
+    sys.exit(0)
+domain = "vpn.example.com"
+ps1 = ps1p.read_text(encoding="utf-8")
+ios = (root / "clients/ios/IKEv2.mobileconfig").read_text(encoding="utf-8")
+vpn = str(uuid.uuid5(uuid.NAMESPACE_DNS, domain + ":vpn")).upper()
+payload = str(uuid.uuid5(uuid.NAMESPACE_DNS, domain + ":profile")).upper()
+out = ps1.replace("__DOMAIN__", domain)
+ios2 = ios.replace("__DOMAIN__", domain).replace("__VPN_UUID__", vpn).replace("__PAYLOAD_UUID__", payload)
+assert "vpn.example.com" in out and "__DOMAIN__" not in out
+assert "vpn.example.com" in ios2 and "__DOMAIN__" not in ios2 and "__VPN_UUID__" not in ios2
+assert "nhaghbayan" not in ios2.lower()
+assert "clients_windows" in (root / "panel/app.py").read_text(encoding="utf-8")
+print("  OK  client stamp")
+PY
+else
+  echo "  skip python3 not installed"
+fi
 
 rm -rf "$TMP"
 echo

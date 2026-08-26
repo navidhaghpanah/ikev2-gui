@@ -1,0 +1,15 @@
+IKEv2 — iPhone / iPad
+=====================
+
+1) File IKEv2.mobileconfig ra be gushi beresun
+   (AirDrop / Telegram / email / Files).
+2) Ruye file tap kon. Payam: Profile Downloaded.
+3) Settings > Profile Downloaded
+   (ya Settings > General > VPN & Device Management)
+4) Install > ramz-e gushi > Install > Done
+5) Settings > VPN > IKEv2 > Connect
+6) User / pass = hesab-e panel
+   Server / Remote ID: __DOMAIN__
+
+Unsigned profile warning ("Not Signed") normal ast.
+Baraye hazf: Settings > General > VPN & Device Management > Remove Profile

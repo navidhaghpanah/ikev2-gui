@@ -51,12 +51,25 @@ sudo DOMAIN=vpn.example.com \
 
 ## اتصال کلاینت
 
+بعد از نصب، از داشبورد پنل دانلود کنید (ویندوز zip / آیفون mobileconfig) یا از `/opt/ikev2-l2tp-gui/clients/out/`. قالب‌ها در پوشه [`clients/`](clients/README.md) هستند.
+
+**ویندوز**
+
+- `Install-IKEv2.bat` را با Run as administrator اجرا کنید
+- Settings → Network → VPN → IKEv2 → Connect
+- یوزر و پس همان کاربر پنل
+- اگر RasMan خطای ۱۰۶۲ داد، `Check-Windows.bat` را اجرا کنید؛ استک خراب ویندوز با این اسکریپت تعمیر نمی‌شود
+
 **IKEv2 (آیفون — پیشنهادی)**
 
-- نوع: IKEv2
-- Server و Remote ID: همان دامنه
-- Local ID خالی، Certificate: None
+- فایل `IKEv2.mobileconfig` را روی گوشی باز کنید → Settings → Profile Downloaded → Install
+- یا دستی: نوع IKEv2، Server و Remote ID همان دامنه، Local ID خالی، Certificate: None
 - یوزر و پس از پنل
+
+**اندروید**
+
+- اپ strongSwan VPN Client، نوع **IKEv2 EAP (Username/Password)**
+- روی سامسونگ داخلی: **IKEv2/IPSec MSCHAPv2** — نه PSK و نه RSA
 
 **L2TP**
 

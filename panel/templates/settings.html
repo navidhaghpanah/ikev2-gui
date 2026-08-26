@@ -66,12 +66,18 @@
     <section class="card">
       <h2>راهنمای اتصال</h2>
       <div class="help">
+        <p>از داشبورد فایل آماده دانلود کنید: ویندوز (zip) و آیفون (mobileconfig).</p>
         <p><strong>IKEv2 (آیفون — پیشنهادی)</strong></p>
         <ul>
-          <li>نوع: IKEv2</li>
+          <li>فایل پروفایل را نصب کنید، یا دستی: نوع IKEv2</li>
           <li>سرور و Remote ID: <code>{{ host }}</code></li>
           <li>Local ID خالی · Certificate: None</li>
           <li>نام کاربری و رمز همان کاربر پنل</li>
+        </ul>
+        <p><strong>ویندوز</strong></p>
+        <ul>
+          <li><code>Install-IKEv2.bat</code> را با Administrator اجرا کنید</li>
+          <li>Settings → VPN → IKEv2 → Connect</li>
         </ul>
         <p><strong>L2TP</strong></p>
         <ul>

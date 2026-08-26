@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # IKEv2 & L2TP GUI — پنل مدیریت
+import io
 import json
 import os
 import re
@@ -7,6 +8,8 @@ import shutil
 import subprocess
 import threading
 import time
+import uuid
+import zipfile
 from datetime import date, datetime
 from functools import wraps
 from pathlib import Path
@@ -19,6 +22,7 @@ from flask import (
     redirect,
     render_template,
     request,
+    send_file,
     session,
     url_for,
 )
@@ -27,6 +31,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 APP_DIR = Path(os.environ.get("IKEGUI_APP", "/opt/ikev2-l2tp-gui"))
 CFG_DIR = Path(os.environ.get("IKEGUI_CFG", "/etc/ikev2-l2tp-gui"))
 DATA_DIR = Path(os.environ.get("IKEGUI_DATA", "/var/lib/ikev2-l2tp-gui"))
+CLIENTS_DIR = APP_DIR / "clients"
 PPP_ONLINE = Path("/var/run/ikev2-l2tp-gui")
 ADMIN_FILE = CFG_DIR / "admin.json"
 CONFIG_FILE = CFG_DIR / "config.json"
@@ -507,6 +512,74 @@ def settings():
     d["admin_user"] = load_admin().get("user") or ""
     d["page"] = "settings"
     return render_template("settings.html", **d)
+
+
+def client_domain():
+    cfg = load_config()
+    return (cfg.get("domain") or "").strip()
+
+
+def stamp_client_text(text, domain):
+    vpn_uuid = str(uuid.uuid5(uuid.NAMESPACE_DNS, domain + ":vpn")).upper()
+    payload_uuid = str(uuid.uuid5(uuid.NAMESPACE_DNS, domain + ":profile")).upper()
+    return (
+        text.replace("__DOMAIN__", domain)
+        .replace("__VPN_UUID__", vpn_uuid)
+        .replace("__PAYLOAD_UUID__", payload_uuid)
+    )
+
+
+def load_client_template(rel, domain):
+    path = CLIENTS_DIR / rel
+    return stamp_client_text(path.read_text(encoding="utf-8"), domain)
+
+
+@app.route("/clients/windows.zip")
+@login_required
+def clients_windows():
+    domain = client_domain()
+    if not domain:
+        flash("دامنه در تنظیمات نیست.")
+        return redirect(url_for("index"))
+    if not (CLIENTS_DIR / "windows" / "Install-IKEv2.ps1").is_file():
+        flash("فایل کلاینت ویندوز روی سرور نیست.")
+        return redirect(url_for("index"))
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        for rel in (
+            "windows/Install-IKEv2.ps1",
+            "windows/Install-IKEv2.bat",
+            "windows/Check-Windows.bat",
+            "windows/RAHNAMA.txt",
+        ):
+            z.writestr(Path(rel).name, load_client_template(rel, domain))
+    buf.seek(0)
+    return send_file(
+        buf,
+        mimetype="application/zip",
+        as_attachment=True,
+        download_name="IKEv2-windows.zip",
+    )
+
+
+@app.route("/clients/ios.mobileconfig")
+@login_required
+def clients_ios():
+    domain = client_domain()
+    if not domain:
+        flash("دامنه در تنظیمات نیست.")
+        return redirect(url_for("index"))
+    path = CLIENTS_DIR / "ios" / "IKEv2.mobileconfig"
+    if not path.is_file():
+        flash("فایل پروفایل iOS روی سرور نیست.")
+        return redirect(url_for("index"))
+    data = load_client_template("ios/IKEv2.mobileconfig", domain).encode("utf-8")
+    return send_file(
+        io.BytesIO(data),
+        mimetype="application/x-apple-aspen-config",
+        as_attachment=True,
+        download_name="IKEv2.mobileconfig",
+    )
 
 
 @app.route("/api/status")

@@ -57,6 +57,12 @@ need=(
   "$SCRIPT_DIR/panel/ikev2-l2tp-gui.service"
   "$SCRIPT_DIR/panel/ppp-ip-up"
   "$SCRIPT_DIR/panel/ppp-ip-down"
+  "$SCRIPT_DIR/clients/windows/Install-IKEv2.ps1"
+  "$SCRIPT_DIR/clients/windows/Install-IKEv2.bat"
+  "$SCRIPT_DIR/clients/windows/Check-Windows.bat"
+  "$SCRIPT_DIR/clients/windows/RAHNAMA.txt"
+  "$SCRIPT_DIR/clients/ios/IKEv2.mobileconfig"
+  "$SCRIPT_DIR/clients/ios/RAHNAMA.txt"
 )
 for f in "${need[@]}"; do
   if [[ ! -f "$f" ]]; then
@@ -114,6 +120,8 @@ install -d "$APP_DIR" "$APP_DIR/templates" "$APP_DIR/static" "$CFG_DIR" "$DATA_D
   /var/run/ikev2-l2tp-gui /var/www/html /etc/ipsec.d/certs /etc/ipsec.d/private /etc/ipsec.d/cacerts
 
 cp -a "$SCRIPT_DIR/panel/." "$APP_DIR/"
+rm -rf "$APP_DIR/clients"
+cp -a "$SCRIPT_DIR/clients" "$APP_DIR/clients"
 chmod 755 "$APP_DIR/app.py" "$APP_DIR/ppp-ip-up" "$APP_DIR/ppp-ip-down"
 install -m 0755 "$APP_DIR/ppp-ip-up" /etc/ppp/ip-up.d/ikev2-l2tp-gui
 install -m 0755 "$APP_DIR/ppp-ip-down" /etc/ppp/ip-down.d/ikev2-l2tp-gui
@@ -408,6 +416,29 @@ systemctl restart ikev2-l2tp-gui
 nginx -t
 systemctl restart nginx
 
+python3 - << PY
+from pathlib import Path
+import uuid
+src = Path("${APP_DIR}/clients")
+out = src / "out"
+out.mkdir(parents=True, exist_ok=True)
+domain = """${DOMAIN}"""
+vpn = str(uuid.uuid5(uuid.NAMESPACE_DNS, domain + ":vpn")).upper()
+payload = str(uuid.uuid5(uuid.NAMESPACE_DNS, domain + ":profile")).upper()
+for rel in (
+    "windows/Install-IKEv2.ps1",
+    "windows/Install-IKEv2.bat",
+    "windows/Check-Windows.bat",
+    "windows/RAHNAMA.txt",
+    "ios/IKEv2.mobileconfig",
+    "ios/RAHNAMA.txt",
+):
+    text = (src / rel).read_text(encoding="utf-8")
+    text = text.replace("__DOMAIN__", domain).replace("__VPN_UUID__", vpn).replace("__PAYLOAD_UUID__", payload)
+    (out / Path(rel).name).write_text(text, encoding="utf-8")
+print("clients stamped")
+PY
+
 echo
 echo "=========================================="
 echo "Nasb tamom shod."
@@ -419,4 +450,6 @@ fi
 echo "Panel user: ${PANEL_USER}"
 echo "IKEv2:  server + Remote ID = ${DOMAIN}"
 echo "L2TP:   server ${DOMAIN}   PSK ${PSK}"
+echo "Windows: panel > download zip   ya  ${APP_DIR}/clients/out/Install-IKEv2.bat"
+echo "iOS:     panel > download profile ya  ${APP_DIR}/clients/out/IKEv2.mobileconfig"
 echo "=========================================="

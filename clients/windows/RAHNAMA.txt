@@ -1,0 +1,11 @@
+IKEv2 — Windows
+===============
+
+1) Install-IKEv2.bat ra double-click kon, Yes (Administrator).
+2) Settings > Network > VPN > IKEv2 > Connect
+3) User / pass = hesabi ke to panel sakhte shode.
+   Server: __DOMAIN__
+
+Agar RasMan / error 1062:
+  Check-Windows.bat ra ejra kon.
+  Built-in IKEv2 ruye Windows-e kharab (WAN Miniport nist) tamir nemishe.
