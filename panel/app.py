@@ -44,6 +44,7 @@ IPSEC_SECRETS = Path("/etc/ipsec.secrets")
 CHAP_SECRETS = Path("/etc/ppp/chap-secrets")
 IPSEC_CONF = Path("/etc/ipsec.conf")
 PPP_OPTS = Path("/etc/ppp/options.xl2tpd")
+STROKE = Path("/usr/lib/ipsec/stroke")
 TZ = ZoneInfo("Asia/Tehran")
 USER_RE = re.compile(r"^[A-Za-z0-9._-]{2,32}$")
 FA_D = str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹")
@@ -59,6 +60,7 @@ app.config["SESSION_COOKIE_SECURE"] = True
 app.config["PERMANENT_SESSION_LIFETIME"] = 60 * 60 * 12
 
 _cpu_prev = None
+_net_prev = None
 _lock = threading.Lock()
 _login_attempts = {}
 LOGIN_WINDOW = 15 * 60
@@ -122,6 +124,7 @@ def load_config():
             "public_ip": "",
             "psk": "",
             "dns": ["9.9.9.9", "1.0.0.1"],
+            "interface": "",
             "max_sessions_per_user": 3,
         },
     )
@@ -408,10 +411,18 @@ def cleanup_excess_sessions(sessions=None):
     for username, active in grouped.items():
         active.sort(key=lambda item: item[0], reverse=True)
         for _, old_session in active[limit:]:
-            target = "%s[%s]" % (old_session.get("conn") or "IKEv2-EAP", old_session["id"])
-            run(["ipsec", "down-nb", target], timeout=5)
+            target = terminate_ike_session(old_session)
             terminated.append({"user": username, "target": target})
     return terminated
+
+
+def terminate_ike_session(session_info):
+    target = "%s[%s]" % (session_info.get("conn") or "IKEv2-EAP", session_info["id"])
+    if STROKE.is_file():
+        run([str(STROKE), "down-nb", target], timeout=5)
+    else:
+        run(["ipsec", "down", target], timeout=5)
+    return target
 
 
 def sample_traffic():
@@ -450,7 +461,7 @@ def sample_traffic():
 
 
 def host_stats():
-    global _cpu_prev
+    global _cpu_prev, _net_prev
     load1, load5, load15 = 0.0, 0.0, 0.0
     try:
         a, b, c = Path("/proc/loadavg").read_text().split()[:3]
@@ -488,6 +499,34 @@ def host_stats():
         uptime = float(Path("/proc/uptime").read_text().split()[0])
     except (OSError, ValueError):
         pass
+    net_iface = (load_config().get("interface") or "").strip()
+    if not re.fullmatch(r"[A-Za-z0-9_.:-]{1,32}", net_iface):
+        net_iface = ""
+    if not net_iface:
+        try:
+            for line in Path("/proc/net/route").read_text().splitlines()[1:]:
+                fields = line.split()
+                if len(fields) > 1 and fields[1] == "00000000":
+                    net_iface = fields[0]
+                    break
+        except OSError:
+            pass
+    net_rx = net_tx = 0
+    net_down_bps = net_up_bps = 0.0
+    if net_iface:
+        try:
+            net_rx = int(Path("/sys/class/net").joinpath(net_iface, "statistics", "rx_bytes").read_text())
+            net_tx = int(Path("/sys/class/net").joinpath(net_iface, "statistics", "tx_bytes").read_text())
+            sampled_at = time.monotonic()
+            previous = _net_prev
+            _net_prev = (net_iface, net_rx, net_tx, sampled_at)
+            if previous and previous[0] == net_iface:
+                elapsed = sampled_at - previous[3]
+                if elapsed > 0:
+                    net_down_bps = max(0.0, (net_rx - previous[1]) / elapsed)
+                    net_up_bps = max(0.0, (net_tx - previous[2]) / elapsed)
+        except (OSError, ValueError):
+            net_rx = net_tx = 0
     cores = os.cpu_count() or 1
     return {
         "cpu": round(cpu_pct, 1),
@@ -502,6 +541,11 @@ def host_stats():
         "disk_used": disk.used,
         "disk_pct": round(100.0 * disk.used / disk.total, 1) if disk.total else 0,
         "uptime": uptime,
+        "net_iface": net_iface,
+        "net_rx": net_rx,
+        "net_tx": net_tx,
+        "net_down_bps": net_down_bps,
+        "net_up_bps": net_up_bps,
     }
 
 
@@ -570,6 +614,11 @@ def dashboard_payload():
         "disk_fa": fa(hs["disk_pct"]),
         "load_fa": fa("%.2f" % hs["load1"]),
         "uptime_h": fmt_uptime(hs["uptime"]),
+        "net_iface": hs["net_iface"] or "—",
+        "net_rx_h": human(hs["net_rx"]),
+        "net_tx_h": human(hs["net_tx"]),
+        "net_down_h": human(hs["net_down_bps"]) + "/ثانیه",
+        "net_up_h": human(hs["net_up_bps"]) + "/ثانیه",
         "now": now_tehran().strftime("%Y/%m/%d %H:%M"),
         "now_fa": fa(now_tehran().strftime("%Y/%m/%d %H:%M")),
     }
@@ -625,7 +674,42 @@ def index():
     d = dashboard_payload()
     d["admin_user"] = load_admin().get("user") or ""
     d["page"] = "dash"
+    d["page_title"] = "داشبورد"
+    d["page_subtitle"] = "نمای کلی سرور و اتصال‌های فعال"
     return render_template("index.html", **d)
+
+
+@app.route("/users")
+@login_required
+def users_page():
+    d = dashboard_payload()
+    d["admin_user"] = load_admin().get("user") or ""
+    d["page"] = "users"
+    d["page_title"] = "کاربران"
+    d["page_subtitle"] = "ساخت حساب و مدیریت حجم و انقضا"
+    return render_template("users.html", **d)
+
+
+@app.route("/sessions")
+@login_required
+def sessions_page():
+    d = dashboard_payload()
+    d["admin_user"] = load_admin().get("user") or ""
+    d["page"] = "sessions"
+    d["page_title"] = "نشست‌ها"
+    d["page_subtitle"] = "اتصال‌های زنده و پاک‌سازی نشست‌های قدیمی"
+    return render_template("sessions.html", **d)
+
+
+@app.route("/clients")
+@login_required
+def clients_page():
+    d = dashboard_payload()
+    d["admin_user"] = load_admin().get("user") or ""
+    d["page"] = "clients"
+    d["page_title"] = "کلاینت‌ها"
+    d["page_subtitle"] = "فایل‌های آمادهٔ اتصال برای دستگاه‌ها"
+    return render_template("clients.html", **d)
 
 
 @app.route("/settings")
@@ -634,6 +718,8 @@ def settings():
     d = dashboard_payload()
     d["admin_user"] = load_admin().get("user") or ""
     d["page"] = "settings"
+    d["page_title"] = "تنظیمات"
+    d["page_subtitle"] = "امنیت، DNS و محدودیت نشست‌ها"
     return render_template("settings.html", **d)
 
 
@@ -663,10 +749,10 @@ def clients_windows():
     domain = client_domain()
     if not domain:
         flash("دامنه در تنظیمات نیست.")
-        return redirect(url_for("index"))
+        return redirect(url_for("clients_page"))
     if not (CLIENTS_DIR / "windows" / "Install-IKEv2.ps1").is_file():
         flash("فایل کلاینت ویندوز روی سرور نیست.")
-        return redirect(url_for("index"))
+        return redirect(url_for("clients_page"))
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
         for rel in (
@@ -691,11 +777,11 @@ def clients_ios():
     domain = client_domain()
     if not domain:
         flash("دامنه در تنظیمات نیست.")
-        return redirect(url_for("index"))
+        return redirect(url_for("clients_page"))
     path = CLIENTS_DIR / "ios" / "IKEv2.mobileconfig"
     if not path.is_file():
         flash("فایل پروفایل iOS روی سرور نیست.")
-        return redirect(url_for("index"))
+        return redirect(url_for("clients_page"))
     data = load_client_template("ios/IKEv2.mobileconfig", domain).encode("utf-8")
     return send_file(
         io.BytesIO(data),
@@ -728,6 +814,10 @@ def api_status():
             "cpu": d["stats"]["cpu"],
             "mem_pct": d["stats"]["mem_pct"],
             "load1": d["stats"]["load1"],
+            "net_rx_h": d["net_rx_h"],
+            "net_tx_h": d["net_tx_h"],
+            "net_down_h": d["net_down_h"],
+            "net_up_h": d["net_up_h"],
             "now_fa": d["now_fa"],
         }
     )
@@ -743,28 +833,28 @@ def users_add():
     quota = (request.form.get("quota_gb") or "0").strip() or "0"
     if not USER_RE.match(name):
         flash("نام کاربری فقط حروف انگلیسی و عدد، ۲ تا ۳۲ نویسه.")
-        return redirect(url_for("index"))
+        return redirect(url_for("users_page"))
     if not safe_secret(password, 12, 64):
         flash("رمز VPN باید ۱۲ تا ۶۴ نویسه و فقط شامل نویسه‌های امن انگلیسی باشد.")
-        return redirect(url_for("index"))
+        return redirect(url_for("users_page"))
     if expires:
         try:
             date.fromisoformat(expires)
         except ValueError:
             flash("تاریخ انقضا نامعتبر است.")
-            return redirect(url_for("index"))
+            return redirect(url_for("users_page"))
     try:
         q = float(quota)
         if not math.isfinite(q) or q < 0:
             raise ValueError()
     except ValueError:
         flash("حجم باید عدد باشد (۰ = نامحدود).")
-        return redirect(url_for("index"))
+        return redirect(url_for("users_page"))
     with _lock:
         users = load_users()
         if name in users:
             flash("این کاربر از قبل وجود دارد.")
-            return redirect(url_for("index"))
+            return redirect(url_for("users_page"))
         users[name] = {
             "password": password,
             "expires": expires,
@@ -776,7 +866,7 @@ def users_add():
         save_users(users)
         write_secrets(users)
     flash("کاربر %s اضافه شد (IKEv2)." % name)
-    return redirect(url_for("index"))
+    return redirect(url_for("users_page"))
 
 
 @app.route("/users/update", methods=["POST"])
@@ -790,23 +880,23 @@ def users_update():
     reset = request.form.get("reset_traffic") == "1"
     if not USER_RE.match(name):
         flash("نام کاربری نامعتبر است.")
-        return redirect(url_for("index"))
+        return redirect(url_for("users_page"))
     with _lock:
         users = load_users()
         if name not in users:
             flash("کاربر پیدا نشد.")
-            return redirect(url_for("index"))
+            return redirect(url_for("users_page"))
         if password:
             if not safe_secret(password, 12, 64):
                 flash("رمز عبور نامعتبر است.")
-                return redirect(url_for("index"))
+                return redirect(url_for("users_page"))
             users[name]["password"] = password
         if expires:
             try:
                 date.fromisoformat(expires)
             except ValueError:
                 flash("تاریخ انقضا نامعتبر است.")
-                return redirect(url_for("index"))
+                return redirect(url_for("users_page"))
         users[name]["expires"] = expires
         if quota != "":
             try:
@@ -816,13 +906,13 @@ def users_update():
                 users[name]["quota_gb"] = q
             except ValueError:
                 flash("حجم نامعتبر است.")
-                return redirect(url_for("index"))
+                return redirect(url_for("users_page"))
         if reset:
             users[name]["used_bytes"] = 0
         save_users(users)
         write_secrets(users)
     flash("تنظیمات کاربر %s ذخیره شد." % name)
-    return redirect(url_for("index"))
+    return redirect(url_for("users_page"))
 
 
 @app.route("/users/delete", methods=["POST"])
@@ -832,17 +922,53 @@ def users_delete():
     name = (request.form.get("name") or "").strip()
     if not USER_RE.match(name):
         flash("نام کاربری نامعتبر است.")
-        return redirect(url_for("index"))
+        return redirect(url_for("users_page"))
     with _lock:
         users = load_users()
         if name not in users:
             flash("کاربر پیدا نشد.")
-            return redirect(url_for("index"))
+            return redirect(url_for("users_page"))
         users.pop(name)
         save_users(users)
         write_secrets(users)
     flash("کاربر %s حذف شد." % name)
-    return redirect(url_for("index"))
+    return redirect(url_for("users_page"))
+
+
+@app.route("/sessions/cleanup", methods=["POST"])
+@login_required
+@csrf_required
+def sessions_cleanup():
+    terminated = cleanup_excess_sessions()
+    if terminated:
+        flash("%s نشست قدیمی برای بسته‌شدن علامت‌گذاری شد." % fa(len(terminated)))
+    else:
+        flash("نشست اضافه‌ای پیدا نشد.")
+    return redirect(url_for("sessions_page"))
+
+
+@app.route("/sessions/delete", methods=["POST"])
+@login_required
+@csrf_required
+def sessions_delete():
+    session_id = (request.form.get("id") or "").strip()
+    if not session_id.isdigit():
+        flash("شناسهٔ نشست نامعتبر است.")
+        return redirect(url_for("sessions_page"))
+    selected = next(
+        (
+            item
+            for item in parse_sessions()
+            if item.get("proto") == "IKEv2" and str(item.get("id")) == session_id
+        ),
+        None,
+    )
+    if not selected:
+        flash("نشست پیدا نشد یا قبلاً بسته شده است.")
+        return redirect(url_for("sessions_page"))
+    terminate_ike_session(selected)
+    flash("نشست %s برای بسته‌شدن علامت‌گذاری شد." % fa(session_id))
+    return redirect(url_for("sessions_page"))
 
 
 @app.route("/settings/psk", methods=["POST"])

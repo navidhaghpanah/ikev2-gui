@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="summary-strip"><div><span>کل حساب‌ها</span><b>{{ total }}</b></div><div><span>آنلاین</span><b class="success-text">{{ online_count }}</b></div><div><span>آفلاین</span><b>{{ total - online_count }}</b></div><div><span>نشست مجاز هر کاربر</span><b>{{ max_sessions_per_user }}</b></div></section>
+<section id="add-user" class="panel">
+  <header class="panel-header"><div><h2>افزودن کاربر جدید</h2><p>برای کاربر نام، رمز و در صورت نیاز محدودیت تعیین کنید.</p></div></header>
+  <form method="post" action="{{ url_for('users_add') }}" class="form-grid add-user-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label><span>نام کاربری</span><input name="name" dir="ltr" placeholder="example_user" required autocomplete="off"></label>
+    <label><span>رمز عبور</span><input name="password" type="password" dir="ltr" placeholder="حداقل ۱۲ نویسه" required minlength="12" maxlength="64" autocomplete="new-password"></label>
+    <label><span>تاریخ انقضا</span><input name="expires" type="date"><small>خالی یعنی بدون انقضا</small></label>
+    <label><span>حجم (GB)</span><input name="quota_gb" type="number" min="0" step="0.1" value="0"><small>صفر یعنی نامحدود</small></label>
+    <button class="primary-button" type="submit">+ ساخت کاربر</button>
+  </form>
+</section>
+<section class="panel">
+  <header class="panel-header"><div><h2>فهرست کاربران</h2><p>ویرایش حجم، تاریخ و رمز بدون نمایش رمز فعلی</p></div><span class="count-badge">{{ total }} کاربر</span></header>
+  <div class="table-wrap flush"><table class="users-table">
+    <thead><tr><th>کاربر</th><th>وضعیت</th><th>انقضا</th><th>مصرف / سهمیه</th><th>ویرایش حساب</th><th></th></tr></thead>
+    <tbody>{% for u in users %}<tr>
+      <td><div class="user-cell"><span class="mini-avatar">{{ u.name[:1]|upper }}</span><span><strong>{{ u.name }}</strong><small>ایجاد: {{ u.created or '—' }}</small></span></div></td>
+      <td>{% if u.block %}<span class="status-label danger"><i></i>{{ u.block }}</span>{% elif u.online %}<span class="status-label success"><i></i>آنلاین</span>{% else %}<span class="status-label neutral"><i></i>آفلاین</span>{% endif %}</td>
+      <td>{{ u.expires or 'نامحدود' }}</td><td><strong>{{ u.used_h }}</strong><small class="cell-note">از {{ u.quota_h }}</small></td>
+      <td><form method="post" action="{{ url_for('users_update') }}" class="edit-user-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="name" value="{{ u.name }}">
+        <input name="password" type="password" dir="ltr" placeholder="رمز جدید" autocomplete="new-password" aria-label="رمز جدید {{ u.name }}">
+        <input name="expires" type="date" value="{{ u.expires }}" aria-label="انقضای {{ u.name }}">
+        <input name="quota_gb" type="number" min="0" step="0.1" value="{{ u.quota_gb }}" aria-label="حجم {{ u.name }}">
+        <label class="check-label"><input type="checkbox" name="reset_traffic" value="1"><span>صفرکردن مصرف</span></label><button class="secondary-button small" type="submit">ذخیره</button>
+      </form></td>
+      <td><form method="post" action="{{ url_for('users_delete') }}" onsubmit="return confirm('حساب {{ u.name }} حذف شود؟')"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="name" value="{{ u.name }}"><button class="icon-button danger" type="submit" title="حذف {{ u.name }}" aria-label="حذف {{ u.name }}">×</button></form></td>
+    </tr>{% else %}<tr><td colspan="6"><div class="empty-state">هنوز کاربری ساخته نشده است.</div></td></tr>{% endfor %}</tbody>
+  </table></div>
+</section>
+{% endblock %}
