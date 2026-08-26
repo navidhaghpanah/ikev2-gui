@@ -23,8 +23,8 @@ Write-Host ''
 
 New-Item -Path 'HKLM:\SYSTEM\CurrentControlSet\Services\PolicyAgent' -Force | Out-Null
 Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Services\PolicyAgent' -Name 'AssumeUDPEncapsulationContextOnSendRule' -Type DWord -Value 2
-New-Item -Path 'HKLM:\SYSTEM\CurrentControlSet\Services\RasMan\Parameters' -Force | Out-Null
-Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Services\RasMan\Parameters' -Name 'DisableIKECertificateRevocationCheck' -Type DWord -Value 1
+# Do not disable certificate revocation checks. The server requires a valid
+# publicly trusted TLS certificate, and Windows should continue to validate it.
 
 try { Set-Service RasMan -StartupType Automatic -ErrorAction SilentlyContinue } catch {}
 try { Set-Service IKEEXT -StartupType Automatic -ErrorAction SilentlyContinue } catch {}

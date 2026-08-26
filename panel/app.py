@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 # IKEv2 GUI — پنل مدیریت
 import io
+import ipaddress
 import json
+import math
 import os
 import re
 import shutil
 import subprocess
 import threading
 import time
+import secrets
 import uuid
 import zipfile
 from datetime import date, datetime
@@ -52,10 +55,14 @@ app = Flask(
 )
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_SECURE"] = True
 app.config["PERMANENT_SESSION_LIFETIME"] = 60 * 60 * 12
 
 _cpu_prev = None
 _lock = threading.Lock()
+_login_attempts = {}
+LOGIN_WINDOW = 15 * 60
+LOGIN_MAX_ATTEMPTS = 5
 
 
 def fa(v):
@@ -128,7 +135,8 @@ def load_admin():
     data = load_json(ADMIN_FILE, {})
     if data.get("secret"):
         app.secret_key = data["secret"]
-    app.config["SESSION_COOKIE_SECURE"] = bool(load_config().get("https", True))
+    # Installation requires TLS. Never downgrade session cookies to HTTP.
+    app.config["SESSION_COOKIE_SECURE"] = True
     return data
 
 
@@ -154,6 +162,46 @@ def login_required(fn):
         return fn(*args, **kwargs)
 
     return wrap
+
+
+def csrf_token():
+    token = session.get("csrf")
+    if not token:
+        token = secrets.token_urlsafe(32)
+        session["csrf"] = token
+    return token
+
+
+@app.context_processor
+def csrf_context():
+    return {"csrf_token": csrf_token}
+
+
+def csrf_required(fn):
+    @wraps(fn)
+    def wrap(*args, **kwargs):
+        submitted = request.form.get("csrf_token", "")
+        expected = session.get("csrf", "")
+        if not expected or not secrets.compare_digest(submitted, expected):
+            flash("درخواست نامعتبر یا منقضی شده است.")
+            return redirect(request.referrer or url_for("index"))
+        return fn(*args, **kwargs)
+
+    return wrap
+
+
+@app.after_request
+def security_headers(response):
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Referrer-Policy"] = "same-origin"
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; "
+        "font-src https://fonts.gstatic.com; script-src 'self'; base-uri 'self'; frame-ancestors 'none'"
+    )
+    if request.is_secure or request.headers.get("X-Forwarded-Proto") == "https":
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    return response
 
 
 def parse_secrets_users():
@@ -197,7 +245,12 @@ def user_blocked(u):
                 return "منقضی"
         except ValueError:
             pass
-    q = float(u.get("quota_gb") or 0)
+    try:
+        q = float(u.get("quota_gb") or 0)
+    except (TypeError, ValueError):
+        return "حجم نامعتبر"
+    if not math.isfinite(q) or q < 0:
+        return "حجم نامعتبر"
     if q > 0 and float(u.get("used_bytes") or 0) >= q * (1024 ** 3):
         return "اتمام حجم"
     return ""
@@ -222,6 +275,10 @@ def write_secrets(users=None, psk=None, public_ip=None, domain=None):
         if user_blocked(u):
             continue
         pw = u.get("password") or ""
+        # These values are rendered into strongSwan/PPP configuration files.
+        # Routes validate them; this guard also protects imported legacy data.
+        if not safe_secret(pw, 4, 64):
+            continue
         lines.append('%s : EAP "%s"' % (name, pw))
         chap.append('%s  l2tpd  "%s"  *' % (name, pw))
     IPSEC_SECRETS.write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -229,6 +286,14 @@ def write_secrets(users=None, psk=None, public_ip=None, domain=None):
     CHAP_SECRETS.write_text("\n".join(chap) + "\n", encoding="utf-8")
     os.chmod(CHAP_SECRETS, 0o600)
     run(["ipsec", "rereadsecrets"])
+
+
+def safe_secret(value, minimum=8, maximum=128):
+    return bool(
+        isinstance(value, str)
+        and minimum <= len(value) <= maximum
+        and re.fullmatch(r"[A-Za-z0-9._~!@#%^&*+=,:;?/-]+", value)
+    )
 
 
 def parse_sessions():
@@ -455,7 +520,6 @@ def dashboard_payload():
         "online_count": len(online),
         "total": len(rows),
         "host": cfg.get("domain") or cfg.get("public_ip") or "",
-        "psk": cfg.get("psk") or "",
         "dns": ",".join(cfg.get("dns") or []),
         "stats": hs,
         "cpu_fa": fa(hs["cpu"]),
@@ -481,19 +545,34 @@ def login():
     load_admin()
     err = ""
     if request.method == "POST":
+        submitted = request.form.get("csrf_token", "")
+        expected = session.get("csrf", "")
+        if not expected or not secrets.compare_digest(submitted, expected):
+            return render_template("login.html", err="درخواست نامعتبر است؛ صفحه را تازه‌سازی کنید.", host=load_config().get("domain") or ""), 400
+        remote = request.headers.get("X-Real-IP", request.remote_addr or "")
+        now = time.monotonic()
+        attempts = [t for t in _login_attempts.get(remote, []) if now - t < LOGIN_WINDOW]
+        if len(attempts) >= LOGIN_MAX_ATTEMPTS:
+            return render_template("login.html", err="تلاش‌های ورود زیاد بوده؛ چند دقیقه بعد دوباره امتحان کنید.", host=load_config().get("domain") or ""), 429
         admin = load_admin()
         user = (request.form.get("user") or "").strip()
         pw = request.form.get("password") or ""
         if user == admin.get("user") and admin.get("password") and check_password_hash(admin["password"], pw):
             session["ok"] = True
             session.permanent = True
+            session.pop("csrf", None)
+            _login_attempts.pop(remote, None)
             return redirect(url_for("index"))
+        attempts.append(now)
+        _login_attempts[remote] = attempts
         err = "نام کاربری یا رمز عبور اشتباه است."
     cfg = load_config()
     return render_template("login.html", err=err, host=cfg.get("domain") or "")
 
 
-@app.route("/logout")
+@app.route("/logout", methods=["POST"])
+@login_required
+@csrf_required
 def logout():
     session.clear()
     return redirect(url_for("login"))
@@ -589,7 +668,6 @@ def clients_ios():
 @login_required
 def api_status():
     d = dashboard_payload()
-    d.pop("psk", None)
     return jsonify(
         {
             "online": d["online"],
@@ -616,6 +694,7 @@ def api_status():
 
 @app.route("/users/add", methods=["POST"])
 @login_required
+@csrf_required
 def users_add():
     name = (request.form.get("name") or "").strip()
     password = (request.form.get("password") or "").strip()
@@ -624,8 +703,8 @@ def users_add():
     if not USER_RE.match(name):
         flash("نام کاربری فقط حروف انگلیسی و عدد، ۲ تا ۳۲ نویسه.")
         return redirect(url_for("index"))
-    if len(password) < 4 or len(password) > 64 or '"' in password:
-        flash("رمز عبور ۴ تا ۶۴ نویسه باشد و گیومه نداشته باشد.")
+    if not safe_secret(password, 12, 64):
+        flash("رمز VPN باید ۱۲ تا ۶۴ نویسه و فقط شامل نویسه‌های امن انگلیسی باشد.")
         return redirect(url_for("index"))
     if expires:
         try:
@@ -635,7 +714,7 @@ def users_add():
             return redirect(url_for("index"))
     try:
         q = float(quota)
-        if q < 0:
+        if not math.isfinite(q) or q < 0:
             raise ValueError()
     except ValueError:
         flash("حجم باید عدد باشد (۰ = نامحدود).")
@@ -661,6 +740,7 @@ def users_add():
 
 @app.route("/users/update", methods=["POST"])
 @login_required
+@csrf_required
 def users_update():
     name = (request.form.get("name") or "").strip()
     password = (request.form.get("password") or "").strip()
@@ -676,7 +756,7 @@ def users_update():
             flash("کاربر پیدا نشد.")
             return redirect(url_for("index"))
         if password:
-            if len(password) < 4 or '"' in password:
+            if not safe_secret(password, 12, 64):
                 flash("رمز عبور نامعتبر است.")
                 return redirect(url_for("index"))
             users[name]["password"] = password
@@ -690,7 +770,7 @@ def users_update():
         if quota != "":
             try:
                 q = float(quota)
-                if q < 0:
+                if not math.isfinite(q) or q < 0:
                     raise ValueError()
                 users[name]["quota_gb"] = q
             except ValueError:
@@ -706,6 +786,7 @@ def users_update():
 
 @app.route("/users/delete", methods=["POST"])
 @login_required
+@csrf_required
 def users_delete():
     name = (request.form.get("name") or "").strip()
     if not USER_RE.match(name):
@@ -725,10 +806,11 @@ def users_delete():
 
 @app.route("/settings/psk", methods=["POST"])
 @login_required
+@csrf_required
 def settings_psk():
     psk = (request.form.get("psk") or "").strip()
-    if len(psk) < 8 or '"' in psk or " " in psk:
-        flash("کلید مشترک حداقل ۸ نویسه، بدون فاصله و گیومه.")
+    if not safe_secret(psk, 16, 128):
+        flash("کلید مشترک باید ۱۶ تا ۱۲۸ نویسه و فقط شامل نویسه‌های امن انگلیسی باشد.")
         return redirect(url_for("settings"))
     with _lock:
         cfg = load_config()
@@ -741,11 +823,17 @@ def settings_psk():
 
 @app.route("/settings/dns", methods=["POST"])
 @login_required
+@csrf_required
 def settings_dns():
     raw = (request.form.get("dns") or "").strip()
     parts = [p.strip() for p in re.split(r"[, ]+", raw) if p.strip()]
     if not parts or len(parts) > 4:
         flash("یک تا چهار DNS وارد کنید.")
+        return redirect(url_for("settings"))
+    try:
+        parts = [str(ipaddress.ip_address(p)) for p in parts]
+    except ValueError:
+        flash("DNS باید یک آدرس IPv4 یا IPv6 معتبر باشد.")
         return redirect(url_for("settings"))
     cfg = load_config()
     cfg["dns"] = parts
@@ -767,10 +855,11 @@ def settings_dns():
 
 @app.route("/settings/admin", methods=["POST"])
 @login_required
+@csrf_required
 def settings_admin():
     pw = (request.form.get("password") or "").strip()
-    if len(pw) < 4:
-        flash("رمز پنل خیلی کوتاه است.")
+    if len(pw) < 12 or len(pw) > 128:
+        flash("رمز پنل باید ۱۲ تا ۱۲۸ نویسه باشد.")
         return redirect(url_for("settings"))
     data = load_admin()
     data["password"] = generate_password_hash(pw)
