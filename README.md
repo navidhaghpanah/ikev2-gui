@@ -1,6 +1,6 @@
-# IKEv2 & L2TP GUI
+# IKEv2 GUI
 
-پنل مدیریت فارسی برای VPN روی **Ubuntu 22.04 / 24.04**: IKEv2 (گواهی Let’s Encrypt + EAP-MSCHAPv2) و L2TP/IPsec (PSK) روی یک سرور.
+پنل مدیریت فارسی برای VPN روی **Ubuntu 22.04 / 24.04**: IKEv2 (گواهی Let’s Encrypt + EAP-MSCHAPv2).
 
 ## امکانات
 
@@ -17,8 +17,8 @@
 دامنه را از قبل به IP سرور اشاره بده، پورت‌های **TCP 80/443** و **UDP 500/4500/1701** باز باشند.
 
 ```bash
-git clone https://github.com/navidhaghpanah/ikev2-l2tp-gui.git
-cd ikev2-l2tp-gui
+git clone https://github.com/navidhaghpanah/ikev2-gui.git
+cd ikev2-gui
 sudo bash install.sh
 ```
 
@@ -71,15 +71,6 @@ sudo DOMAIN=vpn.example.com \
 - اپ strongSwan VPN Client، نوع **IKEv2 EAP (Username/Password)**
 - روی سامسونگ داخلی: **IKEv2/IPSec MSCHAPv2** — نه PSK و نه RSA
 
-**L2TP**
-
-- نوع: L2TP
-- Server: دامنه
-- Secret: همان PSK
-- Send All Traffic روشن
-
-روی iOS جدید L2TP اغلب وصل می‌شود ولی اینترنت نمی‌دهد؛ IKEv2 را استفاده کنید.
-
 ## مسیر فایل‌ها
 
 | مسیر | نقش |
@@ -88,7 +79,6 @@ sudo DOMAIN=vpn.example.com \
 | `/etc/ikev2-l2tp-gui` | config و ادمین |
 | `/var/lib/ikev2-l2tp-gui` | کاربران و ترافیک |
 | `/etc/ipsec.conf` `/etc/ipsec.secrets` | strongSwan |
-| `/etc/xl2tpd` `/etc/ppp` | L2TP |
 
 حذف پنل: `sudo bash uninstall.sh`
 

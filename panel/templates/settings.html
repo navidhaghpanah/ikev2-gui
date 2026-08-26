@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>تنظیمات — IKEv2 و L2TP</title>
+  <title>تنظیمات — IKEv2</title>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700;800&display=swap">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
@@ -11,7 +11,7 @@
   <aside>
     <div class="mark">VPN</div>
     <div class="aside-meta">
-      <strong>IKEv2 و L2TP</strong>
+      <strong>IKEv2</strong>
       <span>{{ host }}</span>
     </div>
     <nav>
@@ -78,13 +78,6 @@
         <ul>
           <li><code>Install-IKEv2.bat</code> را با Administrator اجرا کنید</li>
           <li>Settings → VPN → IKEv2 → Connect</li>
-        </ul>
-        <p><strong>L2TP</strong></p>
-        <ul>
-          <li>نوع: L2TP</li>
-          <li>سرور: <code>{{ host }}</code></li>
-          <li>Secret / PSK: <code>{{ psk }}</code></li>
-          <li>Send All Traffic روشن</li>
         </ul>
       </div>
     </section>

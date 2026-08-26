@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# IKEv2 & L2TP GUI — پنل مدیریت
+# IKEv2 GUI — پنل مدیریت
 import io
 import json
 import os
@@ -652,7 +652,7 @@ def users_add():
         }
         save_users(users)
         write_secrets(users)
-    flash("کاربر %s اضافه شد (IKEv2 و L2TP)." % name)
+    flash("کاربر %s اضافه شد (IKEv2)." % name)
     return redirect(url_for("index"))
 
 

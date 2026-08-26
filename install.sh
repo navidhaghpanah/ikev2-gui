@@ -1,5 +1,5 @@
 #!/bin/bash
-# IKEv2 & L2TP GUI installer
+# IKEv2 GUI installer
 set -euo pipefail
 
 if [[ ${EUID:-$(id -u)} -ne 0 ]]; then
@@ -73,7 +73,7 @@ done
 
 echo
 echo "=========================================="
-echo "   IKEv2 & L2TP GUI  —  installer"
+echo "   IKEv2 GUI  —  installer"
 echo "=========================================="
 echo
 
@@ -449,7 +449,6 @@ else
 fi
 echo "Panel user: ${PANEL_USER}"
 echo "IKEv2:  server + Remote ID = ${DOMAIN}"
-echo "L2TP:   server ${DOMAIN}   PSK ${PSK}"
 echo "Windows: panel > download zip   ya  ${APP_DIR}/clients/out/Install-IKEv2.bat"
 echo "iOS:     panel > download profile ya  ${APP_DIR}/clients/out/IKEv2.mobileconfig"
 echo "=========================================="

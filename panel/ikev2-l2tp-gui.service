@@ -1,5 +1,5 @@
 [Unit]
-Description=IKEv2 & L2TP GUI
+Description=IKEv2 GUI
 After=network.target strongswan-starter.service
 
 [Service]

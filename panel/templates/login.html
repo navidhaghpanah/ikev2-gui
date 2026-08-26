@@ -3,14 +3,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>ورود — IKEv2 و L2TP</title>
+  <title>ورود — IKEv2</title>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700;800&display=swap">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body class="login-body">
   <form class="login-card" method="post">
     <div class="mark">VPN</div>
-    <h1>IKEv2 و L2TP</h1>
+    <h1>IKEv2</h1>
     <p class="muted">{{ host or 'پنل مدیریت کاربران' }}</p>
     {% if err %}<div class="alert bad">{{ err }}</div>{% endif %}
     <label>نام کاربری پنل</label>
