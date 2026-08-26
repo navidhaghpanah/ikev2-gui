@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="client-grid">
+  <article class="download-card"><div class="platform-icon windows">⊞</div><div class="download-copy"><span class="recommended">پیشنهادی</span><h2>Windows</h2><p>نصب خودکار اتصال IKEv2 همراه ابزار بررسی</p><ul><li>سازگار با Windows 10 و 11</li><li>تنظیم خودکار نام سرور</li><li>بدون ذخیرهٔ رمز کاربر</li></ul></div><a class="primary-button full" href="{{ url_for('clients_windows') }}">دانلود فایل ZIP</a></article>
+  <article class="download-card"><div class="platform-icon apple">●</div><div class="download-copy"><span class="recommended neutral">پروفایل آماده</span><h2>iPhone / iPad</h2><p>پروفایل استاندارد برای اتصال سریع IKEv2</p><ul><li>نصب مستقیم در Settings</li><li>Remote ID از قبل تنظیم شده</li><li>ورود امن نام کاربری و رمز</li></ul></div><a class="secondary-button full" href="{{ url_for('clients_ios') }}">دانلود mobileconfig</a></article>
+</section>
+<section class="panel connection-guide"><header class="panel-header"><div><h2>راهنمای اتصال</h2><p>اطلاعات لازم برای راه‌اندازی دستی روی هر دستگاه</p></div></header><div class="guide-grid"><div><span class="step-number">۱</span><h3>نوع اتصال</h3><p><b>IKEv2 EAP</b> را انتخاب کنید.</p></div><div><span class="step-number">۲</span><h3>آدرس و شناسه</h3><p>Server و Remote ID هر دو:</p><code>{{ host }}</code></div><div><span class="step-number">۳</span><h3>ورود کاربر</h3><p>نام کاربری و رمز حساب ساخته‌شده در پنل را وارد کنید.</p></div></div></section>
+<section class="panel compact-panel"><div class="android-row"><span class="android-icon">A</span><div><h2>Android</h2><p>برنامه strongSwan VPN Client را نصب کنید؛ نوع اتصال IKEv2 EAP و آدرس سرور را <code>{{ host }}</code> قرار دهید.</p></div></div></section>
+{% endblock %}

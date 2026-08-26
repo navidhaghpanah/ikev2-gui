@@ -25,7 +25,11 @@ README.md
 .gitattributes
 panel/app.py
 panel/templates/login.html
+panel/templates/base.html
 panel/templates/index.html
+panel/templates/users.html
+panel/templates/sessions.html
+panel/templates/clients.html
 panel/templates/settings.html
 panel/static/style.css
 panel/static/dashboard.js
@@ -135,7 +139,7 @@ PY
 fi
 
 echo "== Farsi UI strings"
-for s in 'داشبورد' 'افراد آنلاین' 'پردازنده' 'حافظه' 'تاریخ انقضا' 'کلید مشترک' 'ورود' 'دانلود کلاینت'; do
+for s in 'داشبورد' 'کاربران آنلاین' 'پردازنده' 'حافظه' 'تاریخ انقضا' 'کلید مشترک' 'ورود' 'دریافت کلاینت' 'ترافیک شبکه'; do
   if grep -q "$s" "$ROOT/panel/templates/"*.html; then ok "ui: $s"; else bad "ui missing $s"; fi
 done
 

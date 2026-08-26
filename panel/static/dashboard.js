@@ -3,19 +3,20 @@
 const fa = value => String(value).replace(/\d/g, digit => '۰۱۲۳۴۵۶۷۸۹'[digit]);
 
 function renderOnline(container, names) {
+  if (!container) return;
   container.replaceChildren();
   if (!names.length) {
-    const empty = document.createElement('p');
-    empty.className = 'muted';
-    empty.textContent = 'الان کسی وصل نیست.';
+    const empty = document.createElement('div');
+    empty.className = 'empty-state compact';
+    empty.textContent = 'کسی آنلاین نیست.';
     container.append(empty);
     return;
   }
   for (const name of names) {
     const person = document.createElement('span');
-    person.className = 'person';
+    person.className = 'online-user';
     const dot = document.createElement('span');
-    dot.className = 'dot on';
+    dot.className = 'online-dot';
     person.append(dot, document.createTextNode(name));
     container.append(person);
   }
@@ -27,11 +28,16 @@ async function refreshDashboard() {
     if (!response.ok) return;
     const data = await response.json();
     document.getElementById('stat-online').textContent = fa(data.online_count);
+    document.getElementById('stat-sessions').textContent = fa(data.sessions.length);
     document.getElementById('stat-cpu').textContent = `${fa(data.cpu)}٪`;
     document.getElementById('stat-ram').textContent = `${fa(data.mem_pct)}٪`;
     document.getElementById('bar-cpu').style.width = `${data.cpu}%`;
     document.getElementById('bar-ram').style.width = `${data.mem_pct}%`;
     document.getElementById('clock').textContent = data.now_fa;
+    document.getElementById('net-down-speed').textContent = data.net_down_h;
+    document.getElementById('net-up-speed').textContent = data.net_up_h;
+    document.getElementById('net-rx-total').textContent = data.net_rx_h;
+    document.getElementById('net-tx-total').textContent = data.net_tx_h;
     renderOnline(document.getElementById('online-list'), data.online);
   } catch (_) {
     // Keep the last successful snapshot visible during transient failures.

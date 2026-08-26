@@ -62,7 +62,11 @@ detect_ip() {
 need=(
   "$SCRIPT_DIR/panel/app.py"
   "$SCRIPT_DIR/panel/templates/login.html"
+  "$SCRIPT_DIR/panel/templates/base.html"
   "$SCRIPT_DIR/panel/templates/index.html"
+  "$SCRIPT_DIR/panel/templates/users.html"
+  "$SCRIPT_DIR/panel/templates/sessions.html"
+  "$SCRIPT_DIR/panel/templates/clients.html"
   "$SCRIPT_DIR/panel/templates/settings.html"
   "$SCRIPT_DIR/panel/static/style.css"
   "$SCRIPT_DIR/panel/static/dashboard.js"
@@ -324,7 +328,8 @@ IKEGUI_INSTALL_CFG_DIR="$CFG_DIR" IKEGUI_INSTALL_DATA_DIR="$DATA_DIR" \
 IKEGUI_INSTALL_DOMAIN="$DOMAIN" IKEGUI_INSTALL_PUBLIC_IP="$PUBLIC_IP" \
 IKEGUI_INSTALL_PSK="$PSK" IKEGUI_INSTALL_PANEL_USER="$PANEL_USER" \
 IKEGUI_INSTALL_PANEL_PASS="$PANEL_PASS" IKEGUI_INSTALL_VPN_USER="$VPN_USER" \
-IKEGUI_INSTALL_VPN_PASS="$VPN_PASS" IKEGUI_INSTALL_HTTPS="$HAVE_SSL" python3 - << 'PY'
+IKEGUI_INSTALL_VPN_PASS="$VPN_PASS" IKEGUI_INSTALL_HTTPS="$HAVE_SSL" \
+IKEGUI_INSTALL_INTERFACE="$IFACE" python3 - << 'PY'
 import json, os, secrets
 from pathlib import Path
 from werkzeug.security import generate_password_hash
@@ -337,6 +342,8 @@ cfg = {
   "public_ip": os.environ["IKEGUI_INSTALL_PUBLIC_IP"],
   "psk": os.environ["IKEGUI_INSTALL_PSK"],
   "dns": ["9.9.9.9", "1.0.0.1"],
+  "interface": os.environ["IKEGUI_INSTALL_INTERFACE"],
+  "max_sessions_per_user": 3,
   "https": os.environ["IKEGUI_INSTALL_HTTPS"] == "1",
 }
 (cfg_dir / "config.json").write_text(json.dumps(cfg, indent=2) + "\n")
