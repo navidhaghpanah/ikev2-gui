@@ -65,6 +65,7 @@ need=(
   "$SCRIPT_DIR/panel/templates/index.html"
   "$SCRIPT_DIR/panel/templates/settings.html"
   "$SCRIPT_DIR/panel/static/style.css"
+  "$SCRIPT_DIR/panel/static/dashboard.js"
   "$SCRIPT_DIR/panel/ikev2-l2tp-gui.service"
   "$SCRIPT_DIR/panel/ppp-ip-up"
   "$SCRIPT_DIR/panel/ppp-ip-down"

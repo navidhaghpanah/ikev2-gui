@@ -187,27 +187,6 @@
       </div>
     </section>
   </main>
-  <script>
-    const fa = s => String(s).replace(/\d/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
-    setInterval(async () => {
-      try {
-        const r = await fetch('/api/status');
-        if (!r.ok) return;
-        const d = await r.json();
-        document.getElementById('stat-online').textContent = fa(d.online_count);
-        document.getElementById('stat-cpu').textContent = fa(d.cpu) + '٪';
-        document.getElementById('stat-ram').textContent = fa(d.mem_pct) + '٪';
-        document.getElementById('bar-cpu').style.width = d.cpu + '%';
-        document.getElementById('bar-ram').style.width = d.mem_pct + '%';
-        document.getElementById('clock').textContent = d.now_fa;
-        const box = document.getElementById('online-list');
-        if (d.online.length) {
-          box.innerHTML = d.online.map(n => '<span class="person"><span class="dot on"></span>' + n + '</span>').join('');
-        } else {
-          box.innerHTML = '<p class="muted">الان کسی وصل نیست.</p>';
-        }
-      } catch (e) {}
-    }, 5000);
-  </script>
+  <script src="{{ url_for('static', filename='dashboard.js') }}" defer></script>
 </body>
 </html>
