@@ -337,6 +337,7 @@ cfg = {
   "public_ip": os.environ["IKEGUI_INSTALL_PUBLIC_IP"],
   "psk": os.environ["IKEGUI_INSTALL_PSK"],
   "dns": ["9.9.9.9", "1.0.0.1"],
+  "max_sessions_per_user": 3,
   "https": os.environ["IKEGUI_INSTALL_HTTPS"] == "1",
 }
 (cfg_dir / "config.json").write_text(json.dumps(cfg, indent=2) + "\n")

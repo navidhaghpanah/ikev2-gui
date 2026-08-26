@@ -122,6 +122,7 @@ def load_config():
             "public_ip": "",
             "psk": "",
             "dns": ["9.9.9.9", "1.0.0.1"],
+            "max_sessions_per_user": 3,
         },
     )
     return cfg
@@ -375,8 +376,47 @@ def parse_sessions():
     return sessions
 
 
+def max_sessions_per_user():
+    try:
+        value = int(load_config().get("max_sessions_per_user", 3))
+    except (TypeError, ValueError):
+        value = 3
+    return max(1, min(10, value))
+
+
+def cleanup_excess_sessions(sessions=None):
+    """Keep the newest IKEv2 sessions for each EAP identity.
+
+    IKE IDs are monotonically increasing for the lifetime of charon, so a
+    larger ID is a newer session.  We intentionally avoid `uniqueids=yes` as
+    clients often present the same outer IKE identity even for different EAP
+    users, and enabling it could disconnect unrelated accounts.
+    """
+    sessions = sessions if sessions is not None else parse_sessions()
+    limit = max_sessions_per_user()
+    grouped = {}
+    for session_info in sessions:
+        if session_info.get("proto") != "IKEv2" or not session_info.get("user"):
+            continue
+        try:
+            ike_id = int(session_info.get("id"))
+        except (TypeError, ValueError):
+            continue
+        grouped.setdefault(session_info["user"], []).append((ike_id, session_info))
+
+    terminated = []
+    for username, active in grouped.items():
+        active.sort(key=lambda item: item[0], reverse=True)
+        for _, old_session in active[limit:]:
+            target = "%s[%s]" % (old_session.get("conn") or "IKEv2-EAP", old_session["id"])
+            run(["ipsec", "down-nb", target], timeout=5)
+            terminated.append({"user": username, "target": target})
+    return terminated
+
+
 def sample_traffic():
     sessions = parse_sessions()
+    cleanup_excess_sessions(sessions)
     with _lock:
         users = load_users()
         snap = load_json(SNAP_FILE, {})
@@ -521,6 +561,7 @@ def dashboard_payload():
         "total": len(rows),
         "host": cfg.get("domain") or cfg.get("public_ip") or "",
         "dns": ",".join(cfg.get("dns") or []),
+        "max_sessions_per_user": max_sessions_per_user(),
         "stats": hs,
         "cpu_fa": fa(hs["cpu"]),
         "mem_fa": fa(hs["mem_pct"]),
@@ -865,6 +906,30 @@ def settings_admin():
     data["password"] = generate_password_hash(pw)
     save_admin(data)
     flash("رمز ورود پنل عوض شد.")
+    return redirect(url_for("settings"))
+
+
+@app.route("/settings/sessions", methods=["POST"])
+@login_required
+@csrf_required
+def settings_sessions():
+    raw = (request.form.get("max_sessions_per_user") or "").strip()
+    try:
+        limit = int(raw)
+        if not 1 <= limit <= 10:
+            raise ValueError()
+    except ValueError:
+        flash("تعداد نشست هم‌زمان باید بین ۱ تا ۱۰ باشد.")
+        return redirect(url_for("settings"))
+    with _lock:
+        cfg = load_config()
+        cfg["max_sessions_per_user"] = limit
+        save_config(cfg)
+        terminated = cleanup_excess_sessions()
+    if terminated:
+        flash("محدودیت ذخیره شد و %s نشست قدیمی بسته شد." % fa(len(terminated)))
+    else:
+        flash("محدودیت نشست‌های هم‌زمان ذخیره شد.")
     return redirect(url_for("settings"))
 
 

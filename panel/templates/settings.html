@@ -67,6 +67,17 @@
     </section>
 
     <section class="card">
+      <h2>نشست‌های هم‌زمان</h2>
+      <form method="post" action="{{ url_for('settings_sessions') }}" class="stack" style="max-width:420px">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label>حداکثر نشست برای هر کاربر</label>
+        <input name="max_sessions_per_user" type="number" min="1" max="10" value="{{ max_sessions_per_user }}" required>
+        <p class="hint">جدیدترین نشست‌ها حفظ می‌شوند و نشست‌های قدیمی‌تر حداکثر تا ۲۰ ثانیه بعد بسته خواهند شد.</p>
+        <button type="submit" class="ghost">ذخیره و پاک‌سازی نشست‌های قدیمی</button>
+      </form>
+    </section>
+
+    <section class="card">
       <h2>راهنمای اتصال</h2>
       <div class="help">
         <p>از داشبورد فایل آماده دانلود کنید: ویندوز (zip) و آیفون (mobileconfig).</p>
