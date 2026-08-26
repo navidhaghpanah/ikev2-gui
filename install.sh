@@ -12,6 +12,17 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_DIR="/opt/ikev2-l2tp-gui"
 CFG_DIR="/etc/ikev2-l2tp-gui"
 DATA_DIR="/var/lib/ikev2-l2tp-gui"
+BACKUP_ROOT="/var/backups/ikev2-l2tp-gui"
+
+valid_domain() { [[ "$1" =~ ^([A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,63}$ ]]; }
+valid_ip() { python3 -c 'import ipaddress,sys; ipaddress.ip_address(sys.argv[1])' "$1" >/dev/null 2>&1; }
+valid_secret() { [[ "$1" =~ ^[A-Za-z0-9._~!@#%^\&*+=,:\;?/-]{12,128}$ ]]; }
+backup_file() {
+  local file="$1"
+  [[ -e "$file" ]] || return 0
+  mkdir -p "$BACKUP_DIR$(dirname "$file")"
+  cp -a "$file" "$BACKUP_DIR$file"
+}
 
 ask() {
   local prompt="$1" def="${2:-}" var
@@ -54,6 +65,7 @@ need=(
   "$SCRIPT_DIR/panel/templates/index.html"
   "$SCRIPT_DIR/panel/templates/settings.html"
   "$SCRIPT_DIR/panel/static/style.css"
+  "$SCRIPT_DIR/panel/static/dashboard.js"
   "$SCRIPT_DIR/panel/ikev2-l2tp-gui.service"
   "$SCRIPT_DIR/panel/ppp-ip-up"
   "$SCRIPT_DIR/panel/ppp-ip-down"
@@ -101,8 +113,20 @@ if [[ -z "$DOMAIN" || -z "$PUBLIC_IP" || -z "$PSK" || -z "$PANEL_USER" || -z "$P
   echo "domain, IP, PSK, user/pass panel lazeman por bashan."
   exit 1
 fi
-if [[ ${#PSK} -lt 8 ]]; then
-  echo "PSK bayad hadaghal 8 character bashe."
+if ! valid_domain "$DOMAIN"; then
+  echo "domain namotabar ast."
+  exit 1
+fi
+if ! valid_ip "$PUBLIC_IP"; then
+  echo "IP namotabar ast."
+  exit 1
+fi
+if ! valid_secret "$PSK" || { [[ -n "$VPN_USER" ]] && ! valid_secret "$VPN_PASS"; }; then
+  echo "PSK va password VPN bayad 12-128 character va faghat az character haye امن bashand."
+  exit 1
+fi
+if [[ "$PANEL_USER" =~ [^A-Za-z0-9._-] || ${#PANEL_USER} -lt 2 || ${#PANEL_USER} -gt 32 || ${#PANEL_PASS} -lt 12 || ${#PANEL_PASS} -gt 128 ]]; then
+  echo "user/password panel namotabar ast (password: 12-128 character)."
   exit 1
 fi
 
@@ -112,9 +136,13 @@ apt-get update -y
 apt-get install -y \
   strongswan strongswan-pki libcharon-extra-plugins libstrongswan-extra-plugins \
   libstrongswan-standard-plugins xl2tpd ppp iptables iptables-persistent \
-  certbot nginx python3-flask python3-pip python3-venv curl openssl
+  certbot nginx python3-flask gunicorn curl openssl
 
-python3 -m pip install --break-system-packages gunicorn flask werkzeug >/dev/null 2>&1 || true
+BACKUP_DIR="$BACKUP_ROOT/$(date +%Y%m%d-%H%M%S)"
+for f in /etc/ipsec.conf /etc/ipsec.secrets /etc/xl2tpd/xl2tpd.conf /etc/ppp/options.xl2tpd \
+  /etc/nginx/sites-enabled/default /etc/nginx/sites-available/default; do
+  backup_file "$f"
+done
 
 install -d "$APP_DIR" "$APP_DIR/templates" "$APP_DIR/static" "$CFG_DIR" "$DATA_DIR" \
   /var/run/ikev2-l2tp-gui /var/www/html /etc/ipsec.d/certs /etc/ipsec.d/private /etc/ipsec.d/cacerts
@@ -146,7 +174,7 @@ if [[ -f /etc/letsencrypt/live/${DOMAIN}/fullchain.pem ]]; then
 fi
 certbot certonly --standalone --non-interactive --agree-tos \
   --cert-name "$DOMAIN" --key-type rsa --rsa-key-size 2048 \
-  "${KEEP[@]}" -d "$DOMAIN" "${CERT_MAIL[@]}" || true
+  "${KEEP[@]}" -d "$DOMAIN" "${CERT_MAIL[@]}"
 
 if [[ -f /etc/letsencrypt/live/${DOMAIN}/fullchain.pem ]]; then
   HAVE_SSL=1
@@ -169,18 +197,8 @@ EOF
       printf '\nwebroot_path = /var/www/html\n' >> "/etc/letsencrypt/renewal/${DOMAIN}.conf"
   fi
 else
-  echo "SSL nashod — cert khod-emza misazam (IKEv2 ruye iPhone warning mide)."
-  ipsec pki --gen --type rsa --size 2048 --outform pem > /tmp/ike-ca.key
-  ipsec pki --self --ca --lifetime 3650 --in /tmp/ike-ca.key --type rsa \
-    --dn "CN=${DOMAIN}-ca" --outform pem > /etc/ipsec.d/cacerts/ca.crt
-  ipsec pki --gen --type rsa --size 2048 --outform pem > /etc/ipsec.d/private/server.key
-  ipsec pki --pub --in /etc/ipsec.d/private/server.key --type rsa | \
-    ipsec pki --issue --lifetime 825 --cacert /etc/ipsec.d/cacerts/ca.crt \
-    --cakey /tmp/ike-ca.key --dn "CN=${DOMAIN}" --san "${DOMAIN}" --san "${PUBLIC_IP}" \
-    --flag serverAuth --flag ikeIntermediate --outform pem \
-    > /etc/ipsec.d/certs/server.crt
-  chmod 600 /etc/ipsec.d/private/server.key
-  rm -f /tmp/ike-ca.key
+  echo "certificate motabar sakhte nashod; nasb baraye hefz amniat motavaqef shod."
+  exit 1
 fi
 
 echo "Config IPsec / L2TP..."
@@ -206,8 +224,8 @@ conn L2TP-PSK
   authby=secret
   pfs=no
   mobike=no
-  ike=aes256-sha1-modp1024,aes256-sha1-modp2048,aes128-sha1-modp1024,3des-sha1-modp1024,aes256-sha256-modp2048!
-  esp=aes256-sha1,aes128-sha1,3des-sha1,aes256-sha256!
+  ike=aes256-sha256-modp2048,aes128-sha256-modp2048!
+  esp=aes256-sha256,aes128-sha256!
   left=%any
   leftid=${PUBLIC_IP}
   leftprotoport=17/1701
@@ -218,8 +236,8 @@ conn L2TP-PSK
 conn IKEv2-EAP
   keyexchange=ikev2
   type=tunnel
-  ike=aes256-sha256-ecp256,aes256-sha256-modp2048,aes256gcm16-prfsha256-ecp256,aes128-sha256-ecp256,aes256-sha1-modp2048,aes256-sha256-modp1024!
-  esp=aes256-sha256,aes128-sha256,aes256gcm16,aes128gcm16,aes256-sha1,aes128-sha1!
+  ike=aes256gcm16-prfsha256-ecp256,aes256-sha256-ecp256,aes256-sha256-modp2048!
+  esp=aes256gcm16,aes128gcm16,aes256-sha256,aes128-sha256!
   left=%any
   leftid=@${DOMAIN}
   leftcert=server.crt
@@ -302,27 +320,31 @@ iptables -C FORWARD -s 10.8.3.0/24 -j ACCEPT 2>/dev/null || iptables -A FORWARD 
 iptables -C FORWARD -d 10.8.3.0/24 -j ACCEPT 2>/dev/null || iptables -A FORWARD -d 10.8.3.0/24 -j ACCEPT
 netfilter-persistent save >/dev/null 2>&1 || iptables-save > /etc/iptables/rules.v4 || true
 
-python3 - << PY
+IKEGUI_INSTALL_CFG_DIR="$CFG_DIR" IKEGUI_INSTALL_DATA_DIR="$DATA_DIR" \
+IKEGUI_INSTALL_DOMAIN="$DOMAIN" IKEGUI_INSTALL_PUBLIC_IP="$PUBLIC_IP" \
+IKEGUI_INSTALL_PSK="$PSK" IKEGUI_INSTALL_PANEL_USER="$PANEL_USER" \
+IKEGUI_INSTALL_PANEL_PASS="$PANEL_PASS" IKEGUI_INSTALL_VPN_USER="$VPN_USER" \
+IKEGUI_INSTALL_VPN_PASS="$VPN_PASS" IKEGUI_INSTALL_HTTPS="$HAVE_SSL" python3 - << 'PY'
 import json, os, secrets
 from pathlib import Path
 from werkzeug.security import generate_password_hash
-cfg_dir = Path("${CFG_DIR}")
-data_dir = Path("${DATA_DIR}")
+cfg_dir = Path(os.environ["IKEGUI_INSTALL_CFG_DIR"])
+data_dir = Path(os.environ["IKEGUI_INSTALL_DATA_DIR"])
 cfg_dir.mkdir(parents=True, exist_ok=True)
 data_dir.mkdir(parents=True, exist_ok=True)
 cfg = {
-  "domain": "${DOMAIN}",
-  "public_ip": "${PUBLIC_IP}",
-  "psk": """${PSK}""",
+  "domain": os.environ["IKEGUI_INSTALL_DOMAIN"],
+  "public_ip": os.environ["IKEGUI_INSTALL_PUBLIC_IP"],
+  "psk": os.environ["IKEGUI_INSTALL_PSK"],
   "dns": ["9.9.9.9", "1.0.0.1"],
-  "https": bool(${HAVE_SSL}),
+  "https": os.environ["IKEGUI_INSTALL_HTTPS"] == "1",
 }
 (cfg_dir / "config.json").write_text(json.dumps(cfg, indent=2) + "\n")
 os.chmod(cfg_dir / "config.json", 0o600)
 admin_file = cfg_dir / "admin.json"
 admin = {
-  "user": "${PANEL_USER}",
-  "password": generate_password_hash("""${PANEL_PASS}"""),
+  "user": os.environ["IKEGUI_INSTALL_PANEL_USER"],
+  "password": generate_password_hash(os.environ["IKEGUI_INSTALL_PANEL_PASS"]),
   "secret": secrets.token_hex(32),
 }
 admin_file.write_text(json.dumps(admin, indent=2) + "\n")
@@ -334,8 +356,8 @@ if users_file.exists():
         users = json.loads(users_file.read_text())
     except Exception:
         users = {}
-vpn_user = "${VPN_USER}"
-vpn_pass = """${VPN_PASS}"""
+vpn_user = os.environ["IKEGUI_INSTALL_VPN_USER"]
+vpn_pass = os.environ["IKEGUI_INSTALL_VPN_PASS"]
 if vpn_user:
     users[vpn_user] = {
         "password": vpn_pass,
@@ -349,6 +371,8 @@ users_file.write_text(json.dumps(users, ensure_ascii=False, indent=2) + "\n")
 os.chmod(users_file, 0o600)
 print("config json ok")
 PY
+printf '%s\n' "$BACKUP_DIR" > "$CFG_DIR/backup-path"
+chmod 600 "$CFG_DIR/backup-path"
 
 python3 - << PY
 import os, sys
@@ -381,25 +405,13 @@ server {
     ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
     add_header X-Frame-Options DENY;
     add_header X-Content-Type-Options nosniff;
+    add_header Referrer-Policy same-origin;
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
     location / {
         proxy_pass http://127.0.0.1:8765;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-Proto https;
-    }
-}
-EOF
-else
-  cat >/etc/nginx/sites-available/ikev2-l2tp-gui << EOF
-server {
-    listen 80;
-    listen [::]:80;
-    server_name ${DOMAIN};
-    location / {
-        proxy_pass http://127.0.0.1:8765;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-Proto http;
     }
 }
 EOF
@@ -442,11 +454,7 @@ PY
 echo
 echo "=========================================="
 echo "Nasb tamom shod."
-if [[ "$HAVE_SSL" -eq 1 ]]; then
-  echo "Panel:   https://${DOMAIN}"
-else
-  echo "Panel:   http://${DOMAIN}   (SSL nashod)"
-fi
+echo "Panel:   https://${DOMAIN}"
 echo "Panel user: ${PANEL_USER}"
 echo "IKEv2:  server + Remote ID = ${DOMAIN}"
 echo "Windows: panel > download zip   ya  ${APP_DIR}/clients/out/Install-IKEv2.bat"

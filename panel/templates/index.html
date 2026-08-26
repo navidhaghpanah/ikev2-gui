@@ -18,7 +18,7 @@
       <a class="on" href="/">داشبورد</a>
       <a href="{{ url_for('settings') }}">تنظیمات</a>
     </nav>
-    <a class="logout" href="{{ url_for('logout') }}">خروج</a>
+    <form method="post" action="{{ url_for('logout') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="logout" type="submit">خروج</button></form>
   </aside>
   <main>
     {% with messages = get_flashed_messages() %}
@@ -125,8 +125,9 @@
     <section class="card">
       <h2>افزودن کاربر</h2>
       <form method="post" action="{{ url_for('users_add') }}" class="row-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <label>نام کاربری<input name="name" placeholder="مثلا user1" required></label>
-        <label>رمز عبور<input name="password" placeholder="حداقل ۴ نویسه" required></label>
+        <label>رمز عبور<input name="password" placeholder="حداقل ۱۲ نویسه" required minlength="12" maxlength="64"></label>
         <label>تاریخ انقضا<input name="expires" type="date"></label>
         <label>حجم (گیگابایت)<input name="quota_gb" type="number" min="0" step="0.1" value="0" title="۰ یعنی نامحدود"></label>
         <button type="submit">افزودن</button>
@@ -142,7 +143,6 @@
             <tr>
               <th>وضعیت</th>
               <th>کاربر</th>
-              <th>رمز</th>
               <th>انقضا</th>
               <th>حجم</th>
               <th></th>
@@ -162,11 +162,11 @@
                 {% endif %}
               </td>
               <td><strong>{{ u.name }}</strong></td>
-              <td><code>{{ u.password }}</code></td>
               <td>{{ u.expires or 'نامحدود' }}</td>
               <td>{{ u.used_h }} / {{ u.quota_h }}</td>
               <td class="actions">
                 <form method="post" action="{{ url_for('users_update') }}" class="inline">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <input type="hidden" name="name" value="{{ u.name }}">
                   <input name="password" placeholder="رمز جدید">
                   <input name="expires" type="date" value="{{ u.expires }}">
@@ -175,6 +175,7 @@
                   <button type="submit" class="ghost sm">ذخیره</button>
                 </form>
                 <form method="post" action="{{ url_for('users_delete') }}" class="inline" onsubmit="return confirm('حذف {{ u.name }}؟')">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <input type="hidden" name="name" value="{{ u.name }}">
                   <button type="submit" class="danger sm">حذف</button>
                 </form>
@@ -186,27 +187,6 @@
       </div>
     </section>
   </main>
-  <script>
-    const fa = s => String(s).replace(/\d/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
-    setInterval(async () => {
-      try {
-        const r = await fetch('/api/status');
-        if (!r.ok) return;
-        const d = await r.json();
-        document.getElementById('stat-online').textContent = fa(d.online_count);
-        document.getElementById('stat-cpu').textContent = fa(d.cpu) + '٪';
-        document.getElementById('stat-ram').textContent = fa(d.mem_pct) + '٪';
-        document.getElementById('bar-cpu').style.width = d.cpu + '%';
-        document.getElementById('bar-ram').style.width = d.mem_pct + '%';
-        document.getElementById('clock').textContent = d.now_fa;
-        const box = document.getElementById('online-list');
-        if (d.online.length) {
-          box.innerHTML = d.online.map(n => '<span class="person"><span class="dot on"></span>' + n + '</span>').join('');
-        } else {
-          box.innerHTML = '<p class="muted">الان کسی وصل نیست.</p>';
-        }
-      } catch (e) {}
-    }, 5000);
-  </script>
+  <script src="{{ url_for('static', filename='dashboard.js') }}" defer></script>
 </body>
 </html>

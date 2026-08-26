@@ -18,7 +18,7 @@
       <a href="/">داشبورد</a>
       <a class="on" href="{{ url_for('settings') }}">تنظیمات</a>
     </nav>
-    <a class="logout" href="{{ url_for('logout') }}">خروج</a>
+    <form method="post" action="{{ url_for('logout') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="logout" type="submit">خروج</button></form>
   </aside>
   <main>
     {% with messages = get_flashed_messages() %}
@@ -37,8 +37,9 @@
       <div class="card">
         <h2>کلید مشترک L2TP (PSK)</h2>
         <form method="post" action="{{ url_for('settings_psk') }}" class="stack">
-          <label>کلید فعلی</label>
-          <input name="psk" value="{{ psk }}" required minlength="8">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <label>کلید جدید</label>
+          <input name="psk" type="password" autocomplete="new-password" placeholder="کلید جدید را وارد کنید" required minlength="16" maxlength="128">
           <p class="hint">بعد از تغییر، گوشی‌هایی که L2TP دارند باید Secret جدید بزنند. IKEv2 با PSK کار نمی‌کند.</p>
           <button type="submit">ذخیره PSK</button>
         </form>
@@ -46,6 +47,7 @@
       <div class="card">
         <h2>DNS تونل</h2>
         <form method="post" action="{{ url_for('settings_dns') }}" class="stack">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <label>سرورهای DNS (با ویرگول)</label>
           <input name="dns" value="{{ dns }}" required>
           <p class="hint">برای اتصال‌های بعدی اعمال می‌شود.</p>
@@ -57,8 +59,9 @@
     <section class="card">
       <h2>رمز ورود پنل</h2>
       <form method="post" action="{{ url_for('settings_admin') }}" class="stack" style="max-width:420px">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <label>مدیر: {{ admin_user }}</label>
-        <input name="password" type="password" placeholder="رمز جدید پنل" required minlength="4">
+        <input name="password" type="password" placeholder="رمز جدید پنل (حداقل ۱۲ نویسه)" required minlength="12" maxlength="128">
         <button type="submit" class="ghost">تغییر رمز پنل</button>
       </form>
     </section>

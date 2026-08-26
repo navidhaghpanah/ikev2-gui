@@ -9,6 +9,7 @@
 </head>
 <body class="login-body">
   <form class="login-card" method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="mark">VPN</div>
     <h1>IKEv2</h1>
     <p class="muted">{{ host or 'پنل مدیریت کاربران' }}</p>

@@ -28,6 +28,7 @@ panel/templates/login.html
 panel/templates/index.html
 panel/templates/settings.html
 panel/static/style.css
+panel/static/dashboard.js
 panel/ppp-ip-up
 panel/ppp-ip-down
 panel/ikev2-l2tp-gui.service
