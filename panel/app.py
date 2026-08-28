@@ -232,8 +232,9 @@ def import_secrets_if_needed():
                 "enabled": True,
             }
             changed = True
-        else:
+        elif users[name].get("password") != pw:
             users[name]["password"] = pw
+            changed = True
     if changed:
         save_users(users)
     return users
@@ -834,7 +835,7 @@ def users_add():
     if not USER_RE.match(name):
         flash("نام کاربری فقط حروف انگلیسی و عدد، ۲ تا ۳۲ نویسه.")
         return redirect(url_for("users_page"))
-    if not safe_secret(password, 12, 64):
+    if not safe_secret(password, 12, 128):
         flash("رمز VPN باید ۱۲ تا ۶۴ نویسه و فقط شامل نویسه‌های امن انگلیسی باشد.")
         return redirect(url_for("users_page"))
     if expires:
@@ -887,7 +888,7 @@ def users_update():
             flash("کاربر پیدا نشد.")
             return redirect(url_for("users_page"))
         if password:
-            if not safe_secret(password, 12, 64):
+            if not safe_secret(password, 12, 128):
                 flash("رمز عبور نامعتبر است.")
                 return redirect(url_for("users_page"))
             users[name]["password"] = password
