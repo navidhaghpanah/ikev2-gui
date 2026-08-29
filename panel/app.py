@@ -157,6 +157,9 @@ def load_config():
     if "vless_port" not in cfg:
         cfg["vless_port"] = 8443
         changed = True
+    if not cfg.get("hy_obfs_password"):
+        cfg["hy_obfs_password"] = secrets.token_urlsafe(16)
+        changed = True
     if changed:
         save_json(CONFIG_FILE, cfg)
     return cfg
@@ -464,11 +467,16 @@ def write_hysteria_config(users=None):
     secret = cfg.get("hy_stats_secret") or ""
     cert = Path("/etc/letsencrypt/live") / domain / "fullchain.pem"
     key = Path("/etc/letsencrypt/live") / domain / "privkey.pem"
+    obfs_pw = cfg.get("hy_obfs_password") or ""
     lines = [
         "listen: :%d" % port,
         "tls:",
         "  cert: %s" % yaml_str(str(cert)),
         "  key: %s" % yaml_str(str(key)),
+        "obfs:",
+        "  type: salamander",
+        "  salamander:",
+        "    password: %s" % yaml_str(obfs_pw),
         "auth:",
         "  type: userpass",
         "  userpass:",
@@ -1167,6 +1175,10 @@ def hy_uri(name, u, cfg):
     host = domain or (cfg.get("public_ip") or "").strip()
     auth = "%s:%s" % (urllib.parse.quote(name), urllib.parse.quote(pw))
     q = {"sni": domain, "insecure": "0"} if domain else {"insecure": "1"}
+    obfs_pw = cfg.get("hy_obfs_password") or ""
+    if obfs_pw:
+        q["obfs"] = "salamander"
+        q["obfs-password"] = obfs_pw
     return "hysteria2://%s@%s:%d/?%s#%s" % (
         auth,
         host,
