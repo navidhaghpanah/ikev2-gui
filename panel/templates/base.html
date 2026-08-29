@@ -29,12 +29,13 @@
     </div>
   </aside>
   <div class="app-shell">
-    <header class="topbar"><div><h1>{{ page_title }}</h1><p>{{ page_subtitle }}</p></div><div class="topbar-meta"><span class="live-badge"><i></i> سرویس آنلاین</span><code>{{ host }}</code></div></header>
+    <header class="topbar"><div><h1>{{ page_title }}</h1><p>{{ page_subtitle }}</p></div><div class="topbar-meta"><span class="live-badge"><i></i> سرویس آنلاین</span><code class="copyable" title="برای کپی کلیک کنید">{{ host }}</code></div></header>
     <main class="content">
       {% with messages = get_flashed_messages() %}{% if messages %}<div class="flash-stack">{% for message in messages %}<div class="alert ok"><span>✓</span>{{ message }}</div>{% endfor %}</div>{% endif %}{% endwith %}
       {% block content %}{% endblock %}
     </main>
   </div>
+  <script src="{{ url_for('static', filename='copy.js') }}" defer></script>
   {% block scripts %}{% endblock %}
 </body>
 </html>

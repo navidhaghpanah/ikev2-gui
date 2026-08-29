@@ -5,12 +5,12 @@
   <div class="proto-grid">
     <div class="proto-qr"><img src="{{ qr_url }}" alt="QR کد اتصال {{ proto_name }}" width="220" height="220"></div>
     <div class="proto-fields">
-      <label><span>لینک اتصال</span><input type="text" dir="ltr" readonly value="{{ uri }}" onclick="this.select()"></label>
-      {% if method %}<label><span>Method</span><input type="text" dir="ltr" readonly value="{{ method }}" onclick="this.select()"></label>{% endif %}
-      {% if server_key %}<label><span>Server Key</span><input type="text" dir="ltr" readonly value="{{ server_key }}" onclick="this.select()"></label>{% endif %}
-      {% if user_key %}<label><span>User Key</span><input type="text" dir="ltr" readonly value="{{ user_key }}" onclick="this.select()"></label>{% endif %}
-      <label><span>پورت</span><input type="text" dir="ltr" readonly value="{{ port }}" onclick="this.select()"></label>
-      <label><span>سرور</span><input type="text" dir="ltr" readonly value="{{ host }}" onclick="this.select()"></label>
+      <label><span>لینک اتصال (برای کپی کلیک کنید)</span><input class="copyable" type="text" dir="ltr" readonly value="{{ uri }}"></label>
+      {% if method %}<label><span>Method</span><input class="copyable" type="text" dir="ltr" readonly value="{{ method }}"></label>{% endif %}
+      {% if server_key %}<label><span>Server Key</span><input class="copyable" type="text" dir="ltr" readonly value="{{ server_key }}"></label>{% endif %}
+      {% if user_key %}<label><span>User Key</span><input class="copyable" type="text" dir="ltr" readonly value="{{ user_key }}"></label>{% endif %}
+      <label><span>پورت</span><input class="copyable" type="text" dir="ltr" readonly value="{{ port }}"></label>
+      <label><span>سرور</span><input class="copyable" type="text" dir="ltr" readonly value="{{ host }}"></label>
     </div>
   </div>
   <p><a class="secondary-button small" href="{{ url_for('clients_page') }}">بازگشت به کلاینت‌ها</a></p>

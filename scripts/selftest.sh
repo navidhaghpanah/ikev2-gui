@@ -31,8 +31,11 @@ panel/templates/users.html
 panel/templates/sessions.html
 panel/templates/clients.html
 panel/templates/settings.html
+panel/templates/client_proto.html
 panel/static/style.css
 panel/static/dashboard.js
+panel/static/copy.js
+panel/telegram_bot.py
 panel/ppp-ip-up
 panel/ppp-ip-down
 panel/ikev2-l2tp-gui.service
