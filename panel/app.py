@@ -38,6 +38,9 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 APP_DIR = Path(os.environ.get("IKEGUI_APP", "/opt/ikev2-l2tp-gui"))
 CFG_DIR = Path(os.environ.get("IKEGUI_CFG", "/etc/ikev2-l2tp-gui"))
+REPO_DIR = Path(os.environ.get("IKEGUI_REPO", "/opt/ikev2-gui-src"))
+REPO_URL = "https://github.com/navidhaghpanah/multivpn-panel.git"
+REPO_BRANCH = "main"
 DATA_DIR = Path(os.environ.get("IKEGUI_DATA", "/var/lib/ikev2-l2tp-gui"))
 CLIENTS_DIR = APP_DIR / "clients"
 PPP_ONLINE = Path("/var/run/ikev2-l2tp-gui")
@@ -1088,6 +1091,7 @@ def settings():
     d["telegram_bot_set"] = bool(token)
     d["telegram_bot_masked"] = ("…" + token[-6:]) if token else ""
     d["telegram_admin_ids"] = ", ".join(str(i) for i in (cfg.get("telegram_admin_ids") or []))
+    d["update_info"] = update_status()
     return render_template("settings.html", **d)
 
 
@@ -1360,7 +1364,34 @@ def subscription(name, token):
     cfg = load_config()
     body = "\n".join(sub_uris(name, u, cfg))
     encoded = base64.b64encode(body.encode("utf-8")).decode("ascii")
-    return (encoded, 200, {"Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store"})
+    return (
+        encoded,
+        200,
+        {
+            "Content-Type": "text/plain; charset=utf-8",
+            "Cache-Control": "no-store",
+            "Subscription-Userinfo": sub_userinfo(u),
+            "Content-Disposition": 'attachment; filename="%s.txt"' % name,
+        },
+    )
+
+
+def sub_userinfo(u):
+    # Standard header most subscription-aware clients (sing-box, NekoBox,
+    # Shadowrocket, Clash...) read to show remaining quota/expiry without
+    # any extra API call. total=0 means unlimited, expire=0 means never.
+    used = int(float(u.get("used_bytes") or 0))
+    q = float(u.get("quota_gb") or 0)
+    total = int(q * (1024 ** 3)) if q > 0 else 0
+    expire = 0
+    exp = (u.get("expires") or "").strip()
+    if exp:
+        try:
+            d = date.fromisoformat(exp)
+            expire = int(datetime(d.year, d.month, d.day, 23, 59, 59, tzinfo=TZ).timestamp())
+        except ValueError:
+            pass
+    return "upload=0; download=%d; total=%d; expire=%d" % (used, total, expire)
 
 
 @app.route("/clients/sub/<name>")
@@ -1755,6 +1786,49 @@ def settings_telegram():
     else:
         run(["systemctl", "stop", "panel-telegram-bot"], timeout=15)
         flash("ربات تلگرام غیرفعال شد.")
+    return redirect(url_for("settings"))
+
+
+def update_status():
+    if not (REPO_DIR / ".git").is_dir():
+        return None
+    run(["git", "-C", str(REPO_DIR), "fetch", "origin", REPO_BRANCH], timeout=20)
+    cur = run(["git", "-C", str(REPO_DIR), "log", "-1", "--format=%h %ci", "HEAD"], timeout=10).strip()
+    latest = run(
+        ["git", "-C", str(REPO_DIR), "log", "-1", "--format=%h %ci", "origin/%s" % REPO_BRANCH], timeout=10
+    ).strip()
+    behind_raw = run(
+        ["git", "-C", str(REPO_DIR), "rev-list", "--count", "HEAD..origin/%s" % REPO_BRANCH], timeout=10
+    ).strip()
+    try:
+        behind = int(behind_raw)
+    except ValueError:
+        behind = None
+    return {"current": cur, "latest": latest, "behind": behind}
+
+
+def apply_update():
+    if not (REPO_DIR / ".git").is_dir():
+        REPO_DIR.parent.mkdir(parents=True, exist_ok=True)
+        clone_out = run(["git", "clone", "--branch", REPO_BRANCH, REPO_URL, str(REPO_DIR)], timeout=90)
+        if not (REPO_DIR / ".git").is_dir():
+            return False, clone_out
+    deploy_script = REPO_DIR / "scripts" / "deploy.sh"
+    if not deploy_script.is_file():
+        return False, "scripts/deploy.sh در %s پیدا نشد" % REPO_DIR
+    out = run(["bash", str(deploy_script), REPO_BRANCH], timeout=120)
+    return "panel restarted OK" in out, out
+
+
+@app.route("/settings/update/apply", methods=["POST"])
+@login_required
+@csrf_required
+def settings_update_apply():
+    ok, out = apply_update()
+    if ok:
+        flash("پنل به‌روزرسانی شد و ری‌استارت شد.")
+    else:
+        flash("به‌روزرسانی ناموفق بود. جزئیات: %s" % out[-400:])
     return redirect(url_for("settings"))
 
 
