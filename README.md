@@ -93,4 +93,4 @@ sudo DOMAIN=vpn.example.com \
 
 ## مجوز
 
-MIT — Navid Haghpanah
+MIT

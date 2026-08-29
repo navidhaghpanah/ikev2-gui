@@ -148,6 +148,12 @@ def load_config():
     if not cfg.get("hy_stats_secret"):
         cfg["hy_stats_secret"] = secrets.token_urlsafe(24)
         changed = True
+    if "telegram_bot_token" not in cfg:
+        cfg["telegram_bot_token"] = ""
+        changed = True
+    if "telegram_admin_ids" not in cfg:
+        cfg["telegram_admin_ids"] = []
+        changed = True
     if changed:
         save_json(CONFIG_FILE, cfg)
     return cfg
@@ -921,6 +927,8 @@ def dashboard_payload():
         "net_up_h": human(hs["net_up_bps"]) + "/ثانیه",
         "now": now_tehran().strftime("%Y/%m/%d %H:%M"),
         "now_fa": fa(now_tehran().strftime("%Y/%m/%d %H:%M")),
+        "profile_display_name": (load_admin().get("display_name") or "").strip(),
+        "profile_contact": (load_admin().get("contact") or "").strip(),
     }
 
 
@@ -1020,6 +1028,11 @@ def settings():
     d["page"] = "settings"
     d["page_title"] = "تنظیمات"
     d["page_subtitle"] = "امنیت، DNS و محدودیت نشست‌ها"
+    cfg = load_config()
+    token = cfg.get("telegram_bot_token") or ""
+    d["telegram_bot_set"] = bool(token)
+    d["telegram_bot_masked"] = ("…" + token[-6:]) if token else ""
+    d["telegram_admin_ids"] = ", ".join(str(i) for i in (cfg.get("telegram_admin_ids") or []))
     return render_template("settings.html", **d)
 
 
@@ -1471,6 +1484,20 @@ def settings_admin():
     return redirect(url_for("settings"))
 
 
+@app.route("/settings/profile", methods=["POST"])
+@login_required
+@csrf_required
+def settings_profile():
+    display_name = (request.form.get("display_name") or "").strip()[:64]
+    contact = (request.form.get("contact") or "").strip()[:128]
+    data = load_admin()
+    data["display_name"] = display_name
+    data["contact"] = contact
+    save_admin(data)
+    flash("پروفایل ذخیره شد.")
+    return redirect(url_for("settings"))
+
+
 @app.route("/settings/sessions", methods=["POST"])
 @login_required
 @csrf_required
@@ -1492,6 +1519,40 @@ def settings_sessions():
         flash("محدودیت ذخیره شد و %s نشست قدیمی بسته شد." % fa(len(terminated)))
     else:
         flash("محدودیت نشست‌های هم‌زمان ذخیره شد.")
+    return redirect(url_for("settings"))
+
+
+@app.route("/settings/telegram", methods=["POST"])
+@login_required
+@csrf_required
+def settings_telegram():
+    token = (request.form.get("telegram_bot_token") or "").strip()
+    ids_raw = (request.form.get("telegram_admin_ids") or "").strip()
+    if token and not re.fullmatch(r"\d+:[A-Za-z0-9_-]{30,50}", token):
+        flash("توکن ربات تلگرام نامعتبر است.")
+        return redirect(url_for("settings"))
+    admin_ids = []
+    for part in re.split(r"[,\s]+", ids_raw):
+        if not part:
+            continue
+        if not part.isdigit():
+            flash("آیدی عددی تلگرام نامعتبر است: %s" % part)
+            return redirect(url_for("settings"))
+        admin_ids.append(int(part))
+    if token and not admin_ids:
+        flash("برای فعال‌کردن ربات باید حداقل یک آیدی عددی ادمین وارد کنید.")
+        return redirect(url_for("settings"))
+    with _lock:
+        cfg = load_config()
+        cfg["telegram_bot_token"] = token
+        cfg["telegram_admin_ids"] = admin_ids
+        save_config(cfg)
+    if token:
+        run(["systemctl", "restart", "panel-telegram-bot"], timeout=15)
+        flash("تنظیمات ربات تلگرام ذخیره و ربات ری‌استارت شد.")
+    else:
+        run(["systemctl", "stop", "panel-telegram-bot"], timeout=15)
+        flash("ربات تلگرام غیرفعال شد.")
     return redirect(url_for("settings"))
 
 
