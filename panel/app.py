@@ -135,7 +135,7 @@ def load_config():
             "psk": "",
             "dns": ["9.9.9.9", "1.0.0.1"],
             "interface": "",
-            "max_sessions_per_user": 3,
+            "max_sessions_per_user": 1,
         },
     )
     changed = False
@@ -582,9 +582,9 @@ def parse_sessions():
 
 def max_sessions_per_user():
     try:
-        value = int(load_config().get("max_sessions_per_user", 3))
+        value = int(load_config().get("max_sessions_per_user", 1))
     except (TypeError, ValueError):
-        value = 3
+        value = 1
     return max(1, min(10, value))
 
 
@@ -626,9 +626,88 @@ def terminate_ike_session(session_info):
     return target
 
 
+def cleanup_excess_ss_sessions(users=None):
+    """Enforce the same per-user concurrent-connection cap for Shadowsocks.
+
+    Each SS-enabled user has their own dedicated port (see
+    write_xray_ss_config), so counting/killing established connections on
+    that port is a precise per-user device count — unlike Hysteria2, where
+    the native API can only kick a whole identity at once.
+    """
+    users = load_users() if users is None else users
+    limit = max_sessions_per_user()
+    terminated = []
+    for name, u in users.items():
+        if not u.get("ss_enabled"):
+            continue
+        port = u.get("ss_port")
+        if not port:
+            continue
+        out = run(["ss", "-tnH", "state", "established", "sport", "=", ":%d" % int(port)], timeout=5)
+        peers = []
+        for line in out.splitlines():
+            parts = line.split()
+            if len(parts) >= 4:
+                peers.append(parts[3])
+        for peer in peers[limit:]:
+            host, sep, pport = peer.rpartition(":")
+            if not sep or not pport.isdigit():
+                continue
+            host = host.strip("[]")
+            run(["ss", "-K", "dst", host, "dport", pport, "sport", "=", ":%d" % int(port)], timeout=5)
+            terminated.append({"user": name, "target": peer})
+    return terminated
+
+
+def cleanup_excess_hysteria_sessions(users=None):
+    """Enforce the per-user concurrent-connection cap for Hysteria2.
+
+    Hysteria2's own API only exposes a device *count* per user and a
+    kick-by-identity call (no per-connection selection), so an over-limit
+    user has all of their sessions kicked at once rather than just the
+    oldest — see /kick's own caveat that a client may simply reconnect.
+    """
+    users = load_users() if users is None else users
+    limit = max_sessions_per_user()
+    cfg = load_config()
+    secret = cfg.get("hy_stats_secret") or ""
+    terminated = []
+    try:
+        req = urllib.request.Request(
+            "http://127.0.0.1:9999/online",
+            headers={"Authorization": secret},
+        )
+        with urllib.request.urlopen(req, timeout=3) as resp:
+            online = json.loads(resp.read().decode("utf-8"))
+    except (urllib.error.URLError, OSError, ValueError):
+        return terminated
+    over_limit = [
+        name
+        for name, count in (online or {}).items()
+        if name in users and users[name].get("hy_enabled") and int(count or 0) > limit
+    ]
+    if not over_limit:
+        return terminated
+    try:
+        body = json.dumps(over_limit).encode("utf-8")
+        req = urllib.request.Request(
+            "http://127.0.0.1:9999/kick",
+            data=body,
+            headers={"Authorization": secret, "Content-Type": "application/json"},
+            method="POST",
+        )
+        urllib.request.urlopen(req, timeout=3)
+        terminated = [{"user": name, "target": "hysteria2"} for name in over_limit]
+    except (urllib.error.URLError, OSError):
+        pass
+    return terminated
+
+
 def sample_traffic():
     sessions = parse_sessions()
     cleanup_excess_sessions(sessions)
+    cleanup_excess_ss_sessions()
+    cleanup_excess_hysteria_sessions()
     with _lock:
         users = load_users()
         snap = load_json(SNAP_FILE, {})
