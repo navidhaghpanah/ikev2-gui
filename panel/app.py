@@ -154,6 +154,9 @@ def load_config():
     if "telegram_admin_ids" not in cfg:
         cfg["telegram_admin_ids"] = []
         changed = True
+    if "vless_port" not in cfg:
+        cfg["vless_port"] = 8443
+        changed = True
     if changed:
         save_json(CONFIG_FILE, cfg)
     return cfg
@@ -342,6 +345,14 @@ def new_ss_key():
     return base64.b64encode(secrets.token_bytes(16)).decode()
 
 
+def new_vless_uuid():
+    return str(uuid.uuid4())
+
+
+def new_sub_token():
+    return secrets.token_urlsafe(24)
+
+
 def write_xray_ss_config(users=None):
     # One dedicated inbound per user (own port + own key) rather than a
     # single shared-port multi-user (EIH) inbound: xray-core's shadowsocks
@@ -352,6 +363,7 @@ def write_xray_ss_config(users=None):
     # "serverKey:userKey"). Per-user ports sidestep that entirely and work
     # with any standard Shadowsocks-2022 client.
     users = load_users() if users is None else users
+    cfg = load_config()
     inbounds = []
     for name, u in users.items():
         if user_blocked(u) or not u.get("ss_enabled"):
@@ -374,6 +386,40 @@ def write_xray_ss_config(users=None):
                 },
             }
         )
+    # VLESS is a single shared port for every user (no EIH-style handshake
+    # issue like Shadowsocks-2022 — each client just carries its own UUID),
+    # so it's one inbound with a multi-entry "clients" list.
+    vless_clients = []
+    for name, u in users.items():
+        if user_blocked(u) or not u.get("vless_enabled"):
+            continue
+        uid = u.get("vless_uuid") or ""
+        if not re.fullmatch(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", uid):
+            continue
+        vless_clients.append({"id": uid, "level": 0, "email": name})
+    if vless_clients:
+        domain = (cfg.get("domain") or "").strip()
+        cert = Path("/etc/letsencrypt/live") / domain / "fullchain.pem"
+        key_path = Path("/etc/letsencrypt/live") / domain / "privkey.pem"
+        if cert.is_file() and key_path.is_file():
+            inbounds.append(
+                {
+                    "tag": "vless-in",
+                    "listen": "0.0.0.0",
+                    "port": int(cfg.get("vless_port") or 8443),
+                    "protocol": "vless",
+                    "settings": {"clients": vless_clients, "decryption": "none"},
+                    "streamSettings": {
+                        "network": "tcp",
+                        "security": "tls",
+                        "tlsSettings": {
+                            "certificates": [
+                                {"certificateFile": str(cert), "keyFile": str(key_path)}
+                            ]
+                        },
+                    },
+                }
+            )
     doc = {
         "log": {"loglevel": "warning"},
         "stats": {},
@@ -896,6 +942,7 @@ def dashboard_payload():
                 "uptime": ses["uptime"] if ses else "",
                 "ss_enabled": bool(u.get("ss_enabled")),
                 "hy_enabled": bool(u.get("hy_enabled")),
+                "vless_enabled": bool(u.get("vless_enabled")),
             }
         )
     cfg = load_config()
@@ -1129,6 +1176,42 @@ def hy_uri(name, u, cfg):
     )
 
 
+def vless_uri(name, u, cfg):
+    uid = u.get("vless_uuid") or ""
+    port = int(cfg.get("vless_port") or 8443)
+    domain = (cfg.get("domain") or "").strip()
+    host = domain or (cfg.get("public_ip") or "").strip()
+    q = {"type": "tcp", "security": "tls", "encryption": "none", "sni": domain}
+    return "vless://%s@%s:%d?%s#%s" % (
+        uid,
+        host,
+        port,
+        urllib.parse.urlencode(q),
+        urllib.parse.quote(name),
+    )
+
+
+def sub_uris(name, u, cfg):
+    uris = []
+    if u.get("ss_enabled") and u.get("ss_key") and u.get("ss_port"):
+        uris.append(ss_uri(name, u, cfg))
+    if u.get("hy_enabled") and u.get("password"):
+        uris.append(hy_uri(name, u, cfg))
+    if u.get("vless_enabled") and u.get("vless_uuid"):
+        uris.append(vless_uri(name, u, cfg))
+    return uris
+
+
+def ensure_sub_token(users, name):
+    token = users[name].get("sub_token")
+    if token:
+        return token
+    token = new_sub_token()
+    users[name]["sub_token"] = token
+    save_users(users)
+    return token
+
+
 def qr_png(data):
     p = subprocess.run(
         ["qrencode", "-o", "-", "-t", "PNG", "-s", "6", "-m", "2", data],
@@ -1214,6 +1297,103 @@ def clients_hysteria_qr(name):
     return (png, 200, {"Content-Type": "image/png", "Cache-Control": "no-store"})
 
 
+@app.route("/clients/vless/<name>")
+@login_required
+def clients_vless(name):
+    users = load_users()
+    u = users.get(name)
+    if not u or not u.get("vless_enabled"):
+        flash("VLESS برای این کاربر فعال نیست.")
+        return redirect(url_for("clients_page"))
+    cfg = load_config()
+    uri = vless_uri(name, u, cfg)
+    d = dashboard_payload()
+    d["admin_user"] = load_admin().get("user") or ""
+    d.update(
+        page="clients",
+        page_title="VLESS — %s" % name,
+        page_subtitle="کانفیگ اتصال VLESS این کاربر",
+        proto_name="VLESS",
+        uri=uri,
+        qr_url=url_for("clients_vless_qr", name=name),
+        method="",
+        server_key="",
+        user_key=u.get("vless_uuid") or "",
+        port=cfg.get("vless_port"),
+    )
+    return render_template("client_proto.html", **d)
+
+
+@app.route("/clients/vless/<name>/qr.png")
+@login_required
+def clients_vless_qr(name):
+    users = load_users()
+    u = users.get(name)
+    if not u or not u.get("vless_enabled"):
+        return ("", 404)
+    png = qr_png(vless_uri(name, u, load_config()))
+    return (png, 200, {"Content-Type": "image/png", "Cache-Control": "no-store"})
+
+
+@app.route("/sub/<name>/<token>")
+def subscription(name, token):
+    # Public by design — this is what proxy client apps auto-refresh from,
+    # they can't hold a panel login session. The per-user token is the
+    # only guard, so it must be checked with a constant-time comparison.
+    users = load_users()
+    u = users.get(name)
+    expected = (u or {}).get("sub_token") or ""
+    if not u or user_blocked(u) or not expected or not secrets.compare_digest(token, expected):
+        return ("", 404)
+    cfg = load_config()
+    body = "\n".join(sub_uris(name, u, cfg))
+    encoded = base64.b64encode(body.encode("utf-8")).decode("ascii")
+    return (encoded, 200, {"Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store"})
+
+
+@app.route("/clients/sub/<name>")
+@login_required
+def clients_sub(name):
+    with _lock:
+        users = load_users()
+        u = users.get(name)
+        if not u:
+            flash("کاربر پیدا نشد.")
+            return redirect(url_for("clients_page"))
+        token = ensure_sub_token(users, name)
+    cfg = load_config()
+    url = "https://" + request.host + url_for("subscription", name=name, token=token)
+    d = dashboard_payload()
+    d["admin_user"] = load_admin().get("user") or ""
+    d.update(
+        page="clients",
+        page_title="لینک Sub — %s" % name,
+        page_subtitle="لینک اشتراک به‌روزشونده؛ هر تغییری در پروتکل‌های این کاربر خودکار توش منعکس می‌شه",
+        proto_name="Subscription",
+        uri=url,
+        qr_url=url_for("clients_sub_qr", name=name),
+        method="",
+        server_key="",
+        user_key="",
+        port="",
+    )
+    return render_template("client_proto.html", **d)
+
+
+@app.route("/clients/sub/<name>/qr.png")
+@login_required
+def clients_sub_qr(name):
+    with _lock:
+        users = load_users()
+        u = users.get(name)
+        if not u:
+            return ("", 404)
+        token = ensure_sub_token(users, name)
+    url = "https://" + request.host + url_for("subscription", name=name, token=token)
+    png = qr_png(url)
+    return (png, 200, {"Content-Type": "image/png", "Cache-Control": "no-store"})
+
+
 @app.route("/api/status")
 @login_required
 def api_status():
@@ -1256,6 +1436,7 @@ def users_add():
     quota = (request.form.get("quota_gb") or "0").strip() or "0"
     ss_enabled = request.form.get("ss_enabled") == "1"
     hy_enabled = request.form.get("hy_enabled") == "1"
+    vless_enabled = request.form.get("vless_enabled") == "1"
     if not USER_RE.match(name):
         flash("نام کاربری فقط حروف انگلیسی و عدد، ۲ تا ۳۲ نویسه.")
         return redirect(url_for("users_page"))
@@ -1289,8 +1470,11 @@ def users_add():
             "enabled": True,
             "ss_enabled": ss_enabled,
             "hy_enabled": hy_enabled,
+            "vless_enabled": vless_enabled,
             "ss_key": new_ss_key() if ss_enabled else "",
             "ss_port": allocate_ss_port() if ss_enabled else None,
+            "vless_uuid": new_vless_uuid() if vless_enabled else "",
+            "sub_token": new_sub_token(),
         }
         save_users(users)
         write_secrets(users)
@@ -1299,6 +1483,8 @@ def users_add():
     proto_note = []
     if ss_enabled:
         proto_note.append("Shadowsocks")
+    if vless_enabled:
+        proto_note.append("VLESS")
     if hy_enabled:
         proto_note.append("Hysteria2")
     label = " + ".join(["IKEv2"] + proto_note)
@@ -1317,6 +1503,7 @@ def users_update():
     reset = request.form.get("reset_traffic") == "1"
     ss_enabled = request.form.get("ss_enabled") == "1"
     hy_enabled = request.form.get("hy_enabled") == "1"
+    vless_enabled = request.form.get("vless_enabled") == "1"
     if not USER_RE.match(name):
         flash("نام کاربری نامعتبر است.")
         return redirect(url_for("users_page"))
@@ -1350,10 +1537,13 @@ def users_update():
             users[name]["used_bytes"] = 0
         users[name]["ss_enabled"] = ss_enabled
         users[name]["hy_enabled"] = hy_enabled
+        users[name]["vless_enabled"] = vless_enabled
         if ss_enabled and not users[name].get("ss_key"):
             users[name]["ss_key"] = new_ss_key()
         if ss_enabled and not users[name].get("ss_port"):
             users[name]["ss_port"] = allocate_ss_port()
+        if vless_enabled and not users[name].get("vless_uuid"):
+            users[name]["vless_uuid"] = new_vless_uuid()
         save_users(users)
         write_secrets(users)
         write_xray_ss_config(users)

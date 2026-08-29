@@ -136,6 +136,7 @@ def fmt_user_detail(name, u):
         "مصرف: %s از %s" % (panel.human(used), quota_h),
         "Shadowsocks: %s" % ("فعال (پورت %s)" % u.get("ss_port") if u.get("ss_enabled") else "غیرفعال"),
         "Hysteria2: %s" % ("فعال" if u.get("hy_enabled") else "غیرفعال"),
+        "VLESS: %s" % ("فعال" if u.get("vless_enabled") else "غیرفعال"),
     ]
     return "\n".join(lines)
 
@@ -143,12 +144,14 @@ def fmt_user_detail(name, u):
 def user_detail_kb(name, u):
     ss_label = "🔴 خاموش‌کردن SS" if u.get("ss_enabled") else "🟢 روشن‌کردن SS"
     hy_label = "🔴 خاموش‌کردن Hysteria2" if u.get("hy_enabled") else "🟢 روشن‌کردن Hysteria2"
+    vless_label = "🔴 خاموش‌کردن VLESS" if u.get("vless_enabled") else "🟢 روشن‌کردن VLESS"
     en_label = "⛔ غیرفعال‌کردن" if u.get("enabled", True) else "✅ فعال‌کردن"
     return kb(
         [
             [{"text": "🔄 صفرکردن مصرف", "callback_data": "reset:%s" % name}],
             [{"text": ss_label, "callback_data": "toggle:%s:ss" % name}],
             [{"text": hy_label, "callback_data": "toggle:%s:hy" % name}],
+            [{"text": vless_label, "callback_data": "toggle:%s:vless" % name}],
             [{"text": en_label, "callback_data": "toggle:%s:enabled" % name}],
             [{"text": "❌ حذف کاربر", "callback_data": "del:%s:ask" % name}],
             [{"text": "🔙 لیست کاربران", "callback_data": "users:0"}],
@@ -192,6 +195,10 @@ def handle_toggle(chat_id, message_id, name, field):
             u["ss_port"] = panel.allocate_ss_port()
     elif field == "hy":
         u["hy_enabled"] = not u.get("hy_enabled")
+    elif field == "vless":
+        u["vless_enabled"] = not u.get("vless_enabled")
+        if u["vless_enabled"] and not u.get("vless_uuid"):
+            u["vless_uuid"] = panel.new_vless_uuid()
     elif field == "enabled":
         u["enabled"] = not u.get("enabled", True)
     apply_user_change(name, users)
@@ -281,31 +288,51 @@ def continue_add_flow(chat_id, text):
             send(chat_id, "عدد نامعتبر است. سهمیه به گیگابایت را بفرستید (۰ یعنی نامحدود):")
             return True
         data["quota_gb"] = q
+        data["protocols"] = set()
         flow["step"] = "protocols"
-        send(
-            chat_id,
-            "پروتکل‌های اضافه روی این کاربر فعال بشه؟",
-            kb(
-                [
-                    [{"text": "فقط IKEv2", "callback_data": "addproto:none"}],
-                    [{"text": "+ Shadowsocks", "callback_data": "addproto:ss"}],
-                    [{"text": "+ Hysteria2", "callback_data": "addproto:hy"}],
-                    [{"text": "+ هر دو", "callback_data": "addproto:both"}],
-                ]
-            ),
-        )
+        send(chat_id, protocols_pick_text(), protocols_pick_kb(data["protocols"]))
         return True
     return True
 
 
-def finish_add_flow(chat_id, message_id, proto_choice):
+PROTO_LABELS = {"ss": "Shadowsocks", "hy": "Hysteria2", "vless": "VLESS"}
+
+
+def protocols_pick_text():
+    return "پروتکل‌های اضافه روی این کاربر (علاوه بر IKEv2) را انتخاب و بعد تأیید کنید:"
+
+
+def protocols_pick_kb(selected):
+    rows = []
+    for key, label in PROTO_LABELS.items():
+        mark = "✅" if key in selected else "◻️"
+        rows.append([{"text": "%s %s" % (mark, label), "callback_data": "addtoggle:%s" % key}])
+    rows.append([{"text": "✔️ تأیید و ساخت کاربر", "callback_data": "addconfirm"}])
+    return kb(rows)
+
+
+def handle_addtoggle(chat_id, message_id, key):
+    flow = FLOWS.get(chat_id)
+    if not flow or flow.get("step") != "protocols":
+        return
+    selected = flow["data"]["protocols"]
+    if key in selected:
+        selected.discard(key)
+    else:
+        selected.add(key)
+    send(chat_id, protocols_pick_text(), protocols_pick_kb(selected), message_id)
+
+
+def finish_add_flow(chat_id, message_id):
     flow = FLOWS.pop(chat_id, None)
     if not flow:
         return
     data = flow["data"]
     name = data["name"]
-    ss_enabled = proto_choice in ("ss", "both")
-    hy_enabled = proto_choice in ("hy", "both")
+    selected = data.get("protocols") or set()
+    ss_enabled = "ss" in selected
+    hy_enabled = "hy" in selected
+    vless_enabled = "vless" in selected
     with panel._lock:
         users = panel.load_users()
         if name in users:
@@ -320,8 +347,10 @@ def finish_add_flow(chat_id, message_id, proto_choice):
             "enabled": True,
             "ss_enabled": ss_enabled,
             "hy_enabled": hy_enabled,
+            "vless_enabled": vless_enabled,
             "ss_key": panel.new_ss_key() if ss_enabled else "",
             "ss_port": panel.allocate_ss_port() if ss_enabled else None,
+            "vless_uuid": panel.new_vless_uuid() if vless_enabled else "",
         }
         panel.save_users(users)
         panel.write_secrets(users)
@@ -386,8 +415,10 @@ def process_callback(cq):
                 handle_delete_confirm(chat_id, message_id, name)
         elif data == "add:start":
             start_add_flow(chat_id, message_id)
-        elif data.startswith("addproto:"):
-            finish_add_flow(chat_id, message_id, data.split(":", 1)[1])
+        elif data.startswith("addtoggle:"):
+            handle_addtoggle(chat_id, message_id, data.split(":", 1)[1])
+        elif data == "addconfirm":
+            finish_add_flow(chat_id, message_id)
     except Exception as e:
         send(chat_id, "خطا: %s" % e, main_menu())
 
