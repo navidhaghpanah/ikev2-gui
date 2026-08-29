@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="panel">
+  <header class="panel-header"><div><h2>{{ proto_name }}</h2><p>این کانفیگ فقط برای همین کاربر معتبر است؛ آن را با کسی به‌اشتراک نگذارید.</p></div></header>
+  <div class="proto-grid">
+    <div class="proto-qr"><img src="{{ qr_url }}" alt="QR کد اتصال {{ proto_name }}" width="220" height="220"></div>
+    <div class="proto-fields">
+      <label><span>لینک اتصال</span><input type="text" dir="ltr" readonly value="{{ uri }}" onclick="this.select()"></label>
+      {% if method %}<label><span>Method</span><input type="text" dir="ltr" readonly value="{{ method }}" onclick="this.select()"></label>{% endif %}
+      {% if server_key %}<label><span>Server Key</span><input type="text" dir="ltr" readonly value="{{ server_key }}" onclick="this.select()"></label>{% endif %}
+      {% if user_key %}<label><span>User Key</span><input type="text" dir="ltr" readonly value="{{ user_key }}" onclick="this.select()"></label>{% endif %}
+      <label><span>پورت</span><input type="text" dir="ltr" readonly value="{{ port }}" onclick="this.select()"></label>
+      <label><span>سرور</span><input type="text" dir="ltr" readonly value="{{ host }}" onclick="this.select()"></label>
+    </div>
+  </div>
+  <p><a class="secondary-button small" href="{{ url_for('clients_page') }}">بازگشت به کلاینت‌ها</a></p>
+</section>
+{% endblock %}
