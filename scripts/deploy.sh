@@ -14,7 +14,7 @@ fi
 
 if [[ ! -d "$REPO_DIR/.git" ]]; then
   echo "cloning repo into $REPO_DIR" >&2
-  git clone --branch "$BRANCH" https://github.com/navidhaghpanah/ikev2-gui.git "$REPO_DIR"
+  git clone --branch "$BRANCH" https://github.com/navidhaghpanah/multivpn-panel.git "$REPO_DIR"
 fi
 
 cd "$REPO_DIR"
