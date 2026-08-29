@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 # IKEv2 GUI — پنل مدیریت
+import base64
+import hashlib
 import io
 import ipaddress
 import json
@@ -11,6 +13,9 @@ import subprocess
 import threading
 import time
 import secrets
+import urllib.error
+import urllib.parse
+import urllib.request
 import uuid
 import zipfile
 from datetime import date, datetime
@@ -45,6 +50,11 @@ CHAP_SECRETS = Path("/etc/ppp/chap-secrets")
 IPSEC_CONF = Path("/etc/ipsec.conf")
 PPP_OPTS = Path("/etc/ppp/options.xl2tpd")
 STROKE = Path("/usr/lib/ipsec/stroke")
+XRAY_SS_BIN = Path("/opt/panel-xray/xray")
+XRAY_SS_CONFIG = Path("/etc/panel-xray/config.json")
+HYSTERIA_BIN = Path("/opt/panel-hysteria/hysteria")
+HYSTERIA_CONFIG = Path("/etc/panel-hysteria/config.yaml")
+SS_METHOD = "2022-blake3-aes-128-gcm"
 TZ = ZoneInfo("Asia/Tehran")
 USER_RE = re.compile(r"^[A-Za-z0-9._-]{2,32}$")
 FA_D = str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹")
@@ -128,7 +138,28 @@ def load_config():
             "max_sessions_per_user": 3,
         },
     )
+    changed = False
+    if "ss_next_port" not in cfg:
+        cfg["ss_next_port"] = 8388
+        changed = True
+    if "hy_port" not in cfg:
+        cfg["hy_port"] = 443
+        changed = True
+    if not cfg.get("hy_stats_secret"):
+        cfg["hy_stats_secret"] = secrets.token_urlsafe(24)
+        changed = True
+    if changed:
+        save_json(CONFIG_FILE, cfg)
     return cfg
+
+
+def allocate_ss_port():
+    # Caller must already hold _lock (called from users_add/users_update).
+    cfg = load_config()
+    port = int(cfg.get("ss_next_port") or 8388)
+    cfg["ss_next_port"] = port + 1
+    save_config(cfg)
+    return port
 
 
 def save_config(cfg):
@@ -301,6 +332,175 @@ def safe_secret(value, minimum=8, maximum=128):
     )
 
 
+def new_ss_key():
+    return base64.b64encode(secrets.token_bytes(16)).decode()
+
+
+def write_xray_ss_config(users=None):
+    # One dedicated inbound per user (own port + own key) rather than a
+    # single shared-port multi-user (EIH) inbound: xray-core's shadowsocks
+    # *outbound* does not appear to speak the 2022 multi-user identity
+    # handshake (verified empirically — a shared port with a "users" array
+    # consistently fails with "cipher: message authentication failed"
+    # regardless of whether the per-user password is the raw key or
+    # "serverKey:userKey"). Per-user ports sidestep that entirely and work
+    # with any standard Shadowsocks-2022 client.
+    users = load_users() if users is None else users
+    inbounds = []
+    for name, u in users.items():
+        if user_blocked(u) or not u.get("ss_enabled"):
+            continue
+        key = u.get("ss_key") or ""
+        port = u.get("ss_port")
+        if not re.fullmatch(r"[A-Za-z0-9+/]{22}==", key) or not port:
+            continue
+        inbounds.append(
+            {
+                "tag": "ss-%s" % name,
+                "listen": "0.0.0.0",
+                "port": int(port),
+                "protocol": "shadowsocks",
+                "settings": {
+                    "network": "tcp,udp",
+                    "method": SS_METHOD,
+                    "password": key,
+                    "email": name,
+                },
+            }
+        )
+    doc = {
+        "log": {"loglevel": "warning"},
+        "stats": {},
+        "api": {"tag": "api", "listen": "127.0.0.1:10085", "services": ["StatsService"]},
+        "policy": {
+            "levels": {"0": {"statsUserUplink": True, "statsUserDownlink": True}},
+            "system": {"statsInboundUplink": True, "statsInboundDownlink": True},
+        },
+        "inbounds": inbounds,
+        "outbounds": [{"protocol": "freedom", "tag": "direct"}],
+    }
+    new_text = json.dumps(doc, indent=2)
+    # A restart drops every live SS connection, not just the one being
+    # edited — skip it when this call didn't actually change anything
+    # (e.g. an unrelated IKEv2-only user was added/edited/deleted).
+    try:
+        unchanged = XRAY_SS_CONFIG.read_text(encoding="utf-8") == new_text
+    except OSError:
+        unchanged = False
+    if unchanged:
+        return
+    XRAY_SS_CONFIG.parent.mkdir(parents=True, exist_ok=True)
+    tmp = XRAY_SS_CONFIG.with_suffix(".tmp")
+    tmp.write_text(new_text, encoding="utf-8")
+    os.chmod(tmp, 0o600)
+    tmp.replace(XRAY_SS_CONFIG)
+    if inbounds:
+        run(["systemctl", "restart", "panel-shadowsocks"], timeout=15)
+    else:
+        run(["systemctl", "stop", "panel-shadowsocks"], timeout=15)
+
+
+def yaml_str(value):
+    return json.dumps(str(value))
+
+
+def write_hysteria_config(users=None):
+    users = load_users() if users is None else users
+    cfg = load_config()
+    port = int(cfg.get("hy_port") or 443)
+    domain = (cfg.get("domain") or "").strip()
+    secret = cfg.get("hy_stats_secret") or ""
+    cert = Path("/etc/letsencrypt/live") / domain / "fullchain.pem"
+    key = Path("/etc/letsencrypt/live") / domain / "privkey.pem"
+    lines = [
+        "listen: :%d" % port,
+        "tls:",
+        "  cert: %s" % yaml_str(str(cert)),
+        "  key: %s" % yaml_str(str(key)),
+        "auth:",
+        "  type: userpass",
+        "  userpass:",
+    ]
+    any_user = False
+    for name, u in users.items():
+        if user_blocked(u) or not u.get("hy_enabled"):
+            continue
+        pw = u.get("password") or ""
+        if not safe_secret(pw, 4, 128):
+            continue
+        lines.append("    %s: %s" % (yaml_str(name), yaml_str(pw)))
+        any_user = True
+    if not any_user:
+        # Deterministic (not freshly random) so an idle config with no
+        # Hysteria2 users compares equal across calls and skips the restart.
+        placeholder = hashlib.sha256(("hy-placeholder:" + secret).encode()).hexdigest()
+        lines.append("    __disabled__: %s" % yaml_str(placeholder))
+    lines += [
+        "trafficStats:",
+        "  listen: 127.0.0.1:9999",
+        "  secret: %s" % yaml_str(secret),
+    ]
+    new_text = "\n".join(lines) + "\n"
+    # Same reasoning as write_xray_ss_config: a restart drops every live
+    # Hysteria2 connection, so skip it when nothing actually changed.
+    try:
+        unchanged = HYSTERIA_CONFIG.read_text(encoding="utf-8") == new_text
+    except OSError:
+        unchanged = False
+    if unchanged:
+        return
+    HYSTERIA_CONFIG.parent.mkdir(parents=True, exist_ok=True)
+    tmp = HYSTERIA_CONFIG.with_suffix(".tmp")
+    tmp.write_text(new_text, encoding="utf-8")
+    os.chmod(tmp, 0o600)
+    tmp.replace(HYSTERIA_CONFIG)
+    if cert.is_file() and key.is_file():
+        run(["systemctl", "restart", "panel-hysteria"], timeout=15)
+    else:
+        run(["systemctl", "stop", "panel-hysteria"], timeout=15)
+
+
+def xray_ss_stats():
+    result = {}
+    try:
+        p = subprocess.run(
+            [str(XRAY_SS_BIN), "api", "statsquery", "-server=127.0.0.1:10085"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        data = json.loads(p.stdout or "{}")
+    except (OSError, subprocess.SubprocessError, json.JSONDecodeError):
+        return result
+    for stat in data.get("stat", []):
+        name = stat.get("name") or ""
+        m = re.match(r"^user>>>(.+)>>>traffic>>>(uplink|downlink)$", name)
+        if not m:
+            continue
+        user = m.group(1)
+        result[user] = result.get(user, 0) + int(stat.get("value") or 0)
+    return result
+
+
+def hysteria_stats():
+    cfg = load_config()
+    secret = cfg.get("hy_stats_secret") or ""
+    req = urllib.request.Request(
+        "http://127.0.0.1:9999/traffic",
+        headers={"Authorization": secret},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=3) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+    except (urllib.error.URLError, OSError, ValueError):
+        return {}
+    result = {}
+    for user, v in (data or {}).items():
+        if isinstance(v, dict):
+            result[user] = int(v.get("tx") or 0) + int(v.get("rx") or 0)
+    return result
+
+
 def parse_sessions():
     text = run(["ipsec", "statusall"])
     sessions = []
@@ -449,6 +649,17 @@ def sample_traffic():
                 users[name]["used_bytes"] = int(users[name].get("used_bytes") or 0) + delta
                 changed = True
             new_snap[key] = total
+        for proto, totals in (("ss", xray_ss_stats()), ("hy", hysteria_stats())):
+            for name, total in totals.items():
+                if name not in users:
+                    continue
+                key = "%s:%s" % (name, proto)
+                prev = int(snap.get(key, 0))
+                delta = total - prev if total >= prev else total
+                if delta > 0:
+                    users[name]["used_bytes"] = int(users[name].get("used_bytes") or 0) + delta
+                    changed = True
+                new_snap[key] = total
         if changed:
             save_users(users)
         save_json(SNAP_FILE, new_snap)
@@ -458,6 +669,13 @@ def sample_traffic():
                 blocked_now = True
         if blocked_now or changed:
             write_secrets()
+        if blocked_now:
+            # Only regenerate SS/Hysteria2 when someone actually needs to be
+            # cut off — both require a process restart (unlike strongSwan's
+            # in-place rereadsecrets), which would drop live connections if
+            # done on every traffic-accounting tick.
+            write_xray_ss_config(users)
+            write_hysteria_config(users)
         return users, sessions
 
 
@@ -591,6 +809,8 @@ def dashboard_payload():
                 "vip": ses["vip"] if ses else "",
                 "remote": ses["remote"] if ses else "",
                 "uptime": ses["uptime"] if ses else "",
+                "ss_enabled": bool(u.get("ss_enabled")),
+                "hy_enabled": bool(u.get("hy_enabled")),
             }
         )
     cfg = load_config()
@@ -792,6 +1012,116 @@ def clients_ios():
     )
 
 
+def ss_uri(name, u, cfg):
+    key = u.get("ss_key") or ""
+    port = int(u.get("ss_port") or 0)
+    host = (cfg.get("domain") or cfg.get("public_ip") or "").strip()
+    plain = "%s:%s" % (SS_METHOD, key)
+    userinfo = base64.urlsafe_b64encode(plain.encode()).decode().rstrip("=")
+    return "ss://%s@%s:%d#%s" % (userinfo, host, port, urllib.parse.quote(name))
+
+
+def hy_uri(name, u, cfg):
+    pw = u.get("password") or ""
+    port = int(cfg.get("hy_port") or 443)
+    domain = (cfg.get("domain") or "").strip()
+    host = domain or (cfg.get("public_ip") or "").strip()
+    auth = "%s:%s" % (urllib.parse.quote(name), urllib.parse.quote(pw))
+    q = {"sni": domain, "insecure": "0"} if domain else {"insecure": "1"}
+    return "hysteria2://%s@%s:%d/?%s#%s" % (
+        auth,
+        host,
+        port,
+        urllib.parse.urlencode(q),
+        urllib.parse.quote(name),
+    )
+
+
+def qr_png(data):
+    p = subprocess.run(
+        ["qrencode", "-o", "-", "-t", "PNG", "-s", "6", "-m", "2", data],
+        capture_output=True,
+        timeout=5,
+    )
+    return p.stdout
+
+
+@app.route("/clients/ss/<name>")
+@login_required
+def clients_ss(name):
+    users = load_users()
+    u = users.get(name)
+    if not u or not u.get("ss_enabled"):
+        flash("Shadowsocks برای این کاربر فعال نیست.")
+        return redirect(url_for("clients_page"))
+    cfg = load_config()
+    uri = ss_uri(name, u, cfg)
+    d = dashboard_payload()
+    d["admin_user"] = load_admin().get("user") or ""
+    d.update(
+        page="clients",
+        page_title="Shadowsocks — %s" % name,
+        page_subtitle="کانفیگ اتصال Shadowsocks (2022) این کاربر",
+        proto_name="Shadowsocks",
+        uri=uri,
+        qr_url=url_for("clients_ss_qr", name=name),
+        method=SS_METHOD,
+        server_key="",
+        user_key=u.get("ss_key") or "",
+        port=u.get("ss_port"),
+    )
+    return render_template("client_proto.html", **d)
+
+
+@app.route("/clients/ss/<name>/qr.png")
+@login_required
+def clients_ss_qr(name):
+    users = load_users()
+    u = users.get(name)
+    if not u or not u.get("ss_enabled"):
+        return ("", 404)
+    png = qr_png(ss_uri(name, u, load_config()))
+    return (png, 200, {"Content-Type": "image/png", "Cache-Control": "no-store"})
+
+
+@app.route("/clients/hysteria/<name>")
+@login_required
+def clients_hysteria(name):
+    users = load_users()
+    u = users.get(name)
+    if not u or not u.get("hy_enabled"):
+        flash("Hysteria2 برای این کاربر فعال نیست.")
+        return redirect(url_for("clients_page"))
+    cfg = load_config()
+    uri = hy_uri(name, u, cfg)
+    d = dashboard_payload()
+    d["admin_user"] = load_admin().get("user") or ""
+    d.update(
+        page="clients",
+        page_title="Hysteria2 — %s" % name,
+        page_subtitle="کانفیگ اتصال Hysteria2 این کاربر",
+        proto_name="Hysteria2",
+        uri=uri,
+        qr_url=url_for("clients_hysteria_qr", name=name),
+        method="",
+        server_key="",
+        user_key="",
+        port=cfg.get("hy_port"),
+    )
+    return render_template("client_proto.html", **d)
+
+
+@app.route("/clients/hysteria/<name>/qr.png")
+@login_required
+def clients_hysteria_qr(name):
+    users = load_users()
+    u = users.get(name)
+    if not u or not u.get("hy_enabled"):
+        return ("", 404)
+    png = qr_png(hy_uri(name, u, load_config()))
+    return (png, 200, {"Content-Type": "image/png", "Cache-Control": "no-store"})
+
+
 @app.route("/api/status")
 @login_required
 def api_status():
@@ -832,6 +1162,8 @@ def users_add():
     password = (request.form.get("password") or "").strip()
     expires = (request.form.get("expires") or "").strip()
     quota = (request.form.get("quota_gb") or "0").strip() or "0"
+    ss_enabled = request.form.get("ss_enabled") == "1"
+    hy_enabled = request.form.get("hy_enabled") == "1"
     if not USER_RE.match(name):
         flash("نام کاربری فقط حروف انگلیسی و عدد، ۲ تا ۳۲ نویسه.")
         return redirect(url_for("users_page"))
@@ -863,10 +1195,22 @@ def users_add():
             "used_bytes": 0,
             "created": today_iso(),
             "enabled": True,
+            "ss_enabled": ss_enabled,
+            "hy_enabled": hy_enabled,
+            "ss_key": new_ss_key() if ss_enabled else "",
+            "ss_port": allocate_ss_port() if ss_enabled else None,
         }
         save_users(users)
         write_secrets(users)
-    flash("کاربر %s اضافه شد (IKEv2)." % name)
+        write_xray_ss_config(users)
+        write_hysteria_config(users)
+    proto_note = []
+    if ss_enabled:
+        proto_note.append("Shadowsocks")
+    if hy_enabled:
+        proto_note.append("Hysteria2")
+    label = " + ".join(["IKEv2"] + proto_note)
+    flash("کاربر %s اضافه شد (%s)." % (name, label))
     return redirect(url_for("users_page"))
 
 
@@ -879,6 +1223,8 @@ def users_update():
     expires = (request.form.get("expires") or "").strip()
     quota = (request.form.get("quota_gb") or "").strip()
     reset = request.form.get("reset_traffic") == "1"
+    ss_enabled = request.form.get("ss_enabled") == "1"
+    hy_enabled = request.form.get("hy_enabled") == "1"
     if not USER_RE.match(name):
         flash("نام کاربری نامعتبر است.")
         return redirect(url_for("users_page"))
@@ -910,8 +1256,16 @@ def users_update():
                 return redirect(url_for("users_page"))
         if reset:
             users[name]["used_bytes"] = 0
+        users[name]["ss_enabled"] = ss_enabled
+        users[name]["hy_enabled"] = hy_enabled
+        if ss_enabled and not users[name].get("ss_key"):
+            users[name]["ss_key"] = new_ss_key()
+        if ss_enabled and not users[name].get("ss_port"):
+            users[name]["ss_port"] = allocate_ss_port()
         save_users(users)
         write_secrets(users)
+        write_xray_ss_config(users)
+        write_hysteria_config(users)
     flash("تنظیمات کاربر %s ذخیره شد." % name)
     return redirect(url_for("users_page"))
 
@@ -932,6 +1286,8 @@ def users_delete():
         users.pop(name)
         save_users(users)
         write_secrets(users)
+        write_xray_ss_config(users)
+        write_hysteria_config(users)
     flash("کاربر %s حذف شد." % name)
     return redirect(url_for("users_page"))
 
