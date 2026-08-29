@@ -23,9 +23,10 @@ function renderOnline(container, names) {
 }
 
 async function refreshDashboard() {
+  const liveBadge = document.querySelector('.topbar .live-badge');
   try {
     const response = await fetch('/api/status', {credentials: 'same-origin'});
-    if (!response.ok) return;
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
     document.getElementById('stat-online').textContent = fa(data.online_count);
     document.getElementById('stat-sessions').textContent = fa(data.sessions.length);
@@ -39,9 +40,19 @@ async function refreshDashboard() {
     document.getElementById('net-rx-total').textContent = data.net_rx_h;
     document.getElementById('net-tx-total').textContent = data.net_tx_h;
     renderOnline(document.getElementById('online-list'), data.online);
+    if (liveBadge) {
+      liveBadge.classList.remove('stale');
+      liveBadge.innerHTML = '<i></i> سرویس آنلاین';
+      liveBadge.title = '';
+    }
   } catch (_) {
-    // Keep the last successful snapshot visible during transient failures.
+    if (liveBadge) {
+      liveBadge.classList.add('stale');
+      liveBadge.innerHTML = '<i></i> اطلاعات قدیمی';
+      liveBadge.title = 'دریافت اطلاعات تازه ناموفق بود؛ آخرین اطلاعات موفق نمایش داده می‌شود.';
+    }
   }
 }
 
+refreshDashboard();
 window.setInterval(refreshDashboard, 5000);

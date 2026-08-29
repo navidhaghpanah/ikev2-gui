@@ -25,18 +25,23 @@
       </span></div></td>
       <td>{% if u.block %}<span class="status-label danger"><i></i>{{ u.block }}</span>{% elif u.online %}<span class="status-label success"><i></i>آنلاین</span>{% else %}<span class="status-label neutral"><i></i>آفلاین</span>{% endif %}</td>
       <td>{{ u.expires or 'نامحدود' }}</td><td><strong>{{ u.used_h }}</strong><small class="cell-note">از {{ u.quota_h }}</small></td>
-      <td><form method="post" action="{{ url_for('users_update') }}" class="edit-user-form">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="name" value="{{ u.name }}">
-        <input name="password" type="password" dir="ltr" placeholder="رمز جدید" autocomplete="new-password" aria-label="رمز جدید {{ u.name }}">
-        <input name="expires" type="date" value="{{ u.expires }}" aria-label="انقضای {{ u.name }}">
-        <input name="quota_gb" type="number" min="0" step="0.1" value="{{ u.quota_gb }}" aria-label="حجم {{ u.name }}">
-        <label class="check-label"><input type="checkbox" name="ss_enabled" value="1" {{ 'checked' if u.ss_enabled }}><span>SS</span></label>
-        <label class="check-label"><input type="checkbox" name="hy_enabled" value="1" {{ 'checked' if u.hy_enabled }}><span>Hysteria2</span></label>
-        <label class="check-label"><input type="checkbox" name="vless_enabled" value="1" {{ 'checked' if u.vless_enabled }}><span>VLESS</span></label>
-        <label class="check-label"><input type="checkbox" name="reset_traffic" value="1"><span>صفرکردن مصرف</span></label><button class="secondary-button small" type="submit">ذخیره</button>
-      </form></td>
-      <td><form method="post" action="{{ url_for('users_delete') }}" onsubmit="return confirm('حساب {{ u.name }} حذف شود؟')"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="name" value="{{ u.name }}"><button class="icon-button danger" type="submit" title="حذف {{ u.name }}" aria-label="حذف {{ u.name }}">×</button></form></td>
+      <td><button class="secondary-button small edit-user-button" type="button" data-user="{{ u.name|e }}" data-expires="{{ u.expires|e }}" data-quota="{{ u.quota_gb }}" data-ss="{{ '1' if u.ss_enabled else '0' }}" data-hy="{{ '1' if u.hy_enabled else '0' }}" data-vless="{{ '1' if u.vless_enabled else '0' }}">ویرایش حساب</button></td>
+      <td><form method="post" action="{{ url_for('users_delete') }}" data-confirm="حساب {{ u.name|e }} حذف شود؟ این عملیات قابل بازگشت نیست." data-confirm-title="حذف کاربر"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="name" value="{{ u.name }}"><button class="icon-button danger" type="submit" title="حذف {{ u.name }}" aria-label="حذف {{ u.name }}">×</button></form></td>
     </tr>{% else %}<tr><td colspan="6"><div class="empty-state">هنوز کاربری ساخته نشده است.</div></td></tr>{% endfor %}</tbody>
   </table></div>
 </section>
+<dialog class="app-dialog" id="edit-user-dialog" aria-labelledby="edit-user-title">
+  <form method="post" action="{{ url_for('users_update') }}" class="dialog-card edit-user-dialog-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="name" id="edit-user-name">
+    <header class="dialog-header"><div><h2 id="edit-user-title">ویرایش حساب</h2><p>تنظیمات حساب <strong id="edit-user-label"></strong></p></div><button class="dialog-close" type="button" data-dialog-close aria-label="بستن">×</button></header>
+    <div class="dialog-form-grid">
+      <label><span>رمز جدید</span><span class="password-field"><input name="password" type="password" dir="ltr" placeholder="برای حفظ رمز خالی بگذارید" autocomplete="new-password"><button type="button" class="password-toggle" aria-label="نمایش رمز">نمایش</button></span></label>
+      <label><span>تاریخ انقضا</span><input id="edit-user-expires" name="expires" type="date"></label>
+      <label><span>حجم (GB)</span><input id="edit-user-quota" name="quota_gb" type="number" min="0" step="0.1"><small>صفر یعنی نامحدود</small></label>
+    </div>
+    <fieldset class="protocol-fieldset"><legend>پروتکل‌های فعال</legend><label class="check-label"><input id="edit-user-ss" type="checkbox" name="ss_enabled" value="1"><span>Shadowsocks</span></label><label class="check-label"><input id="edit-user-hy" type="checkbox" name="hy_enabled" value="1"><span>Hysteria2</span></label><label class="check-label"><input id="edit-user-vless" type="checkbox" name="vless_enabled" value="1"><span>VLESS</span></label></fieldset>
+    <label class="check-label reset-check"><input type="checkbox" name="reset_traffic" value="1"><span>مصرف ترافیک این کاربر صفر شود</span></label>
+    <div class="dialog-actions"><button class="secondary-button" type="button" data-dialog-close>انصراف</button><button class="primary-button" type="submit">ذخیره تغییرات</button></div>
+  </form>
+</dialog>
 {% endblock %}

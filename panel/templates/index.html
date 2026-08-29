@@ -16,4 +16,4 @@
   <article class="panel span-3"><header class="panel-header"><div><h2>کاربران آنلاین</h2><p>حساب‌های متصل در این لحظه</p></div></header><div id="online-list" class="online-list">{% for name in online %}<span class="online-user"><i></i>{{ name }}</span>{% else %}<div class="empty-state compact">کسی آنلاین نیست.</div>{% endfor %}</div></article>
 </section>
 {% endblock %}
-{% block scripts %}<script src="{{ url_for('static', filename='dashboard.js') }}" defer></script>{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='dashboard.js', v='20260829-ui2') }}" defer></script>{% endblock %}

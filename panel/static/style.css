@@ -38,3 +38,27 @@ code{font-family:Consolas,"Courier New",monospace;font-size:.78rem;color:#50345a
 .copied-badge{position:fixed;transform:translate(-50%,-130%);background:var(--navy);color:#fff;font-size:9px;font-weight:700;padding:4px 9px;border-radius:6px;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;white-space:nowrap;z-index:9999}.copied-badge.show{opacity:1;transform:translate(-50%,-160%)}
 .update-info{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:13px 0}.update-info dt{color:var(--muted);font-size:9px}.update-info dd{margin:4px 0 0;font-size:10px;font-weight:700}.update-info code{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
 @media(max-width:600px){.proto-grid{grid-template-columns:1fr}.proto-qr img{max-width:220px}}
+
+
+/* Readability and interaction polish */
+body{font-size:15px;line-height:1.65}
+.brand strong{font-size:16px}.brand small,.server-pill small,.admin-row small{font-size:11px}.server-pill b,.admin-row b{font-size:12px}
+.nav-label{font-size:11px}.side-nav a{font-size:14px;min-height:44px}
+.topbar p,.metric-card span,.panel-header p,.settings-heading p,.download-copy p,.android-row p{font-size:12px}
+.panel-header h2,.settings-heading h2,.download-copy h2,.android-row h2{font-size:16px}
+.live-badge,.health-dot,.count-badge,.text-link{font-size:12px}
+.metric-card small,.resource-item small,.summary-strip span,.user-cell small,.cell-note,.traffic small{font-size:11px}
+.table-wrap table{font-size:13px;min-width:760px}th{font-size:11px}th,td{padding:13px 14px}.user-cell strong{font-size:13px}
+label>span{font-size:12px}label>small{font-size:10px}input{height:44px;font-size:14px}
+button,.primary-button,.secondary-button,.danger-button{min-height:42px;font-size:12px;padding:10px 16px}.small{min-height:36px;font-size:11px}
+.check-label{font-size:11px;gap:7px}.check-label input{width:17px;height:17px}.check-label span{font-size:11px}
+.status-label,.protocol,.proto-badge{font-size:10px}.info-banner p{font-size:12px}
+.live-badge.stale{color:#9b6500;background:#fff3d5}.live-badge.stale i{background:var(--amber)}
+.is-loading{cursor:wait;opacity:.72}.is-loading::before{content:'';width:13px;height:13px;border:2px solid currentColor;border-left-color:transparent;border-radius:50%;margin-left:7px;animation:button-spin .7s linear infinite}@keyframes button-spin{to{transform:rotate(360deg)}}
+.password-field{display:flex;position:relative}.password-field input{padding-left:65px}.password-toggle{position:absolute;left:5px;top:5px;min-height:34px;padding:5px 9px;background:#f6f0f8;color:#654d6e;font-size:11px}
+.app-dialog{border:0;padding:0;background:transparent;max-width:min(560px,calc(100vw - 28px));width:100%;color:var(--ink)}.app-dialog::backdrop{background:rgba(28,9,34,.58);backdrop-filter:blur(3px)}
+.dialog-card{background:#fff;border-radius:16px;padding:24px;box-shadow:0 28px 80px rgba(24,8,30,.28);display:grid;gap:18px}.dialog-card h2{font-size:18px;margin:0}.dialog-card p{font-size:13px;color:var(--muted);margin:4px 0 0}.dialog-icon{width:42px;height:42px;display:grid;place-items:center;border-radius:12px;font-size:20px;font-weight:800}.dialog-icon.danger{color:#c22e45;background:#fff0f2}.dialog-header{display:flex;justify-content:space-between;align-items:flex-start;gap:15px}.dialog-close{min-width:38px;width:38px;min-height:38px;padding:0;border:1px solid var(--line);background:#fff;color:#765e7f;font-size:22px}.dialog-actions{display:flex;justify-content:flex-end;gap:9px}.dialog-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}.dialog-form-grid label:first-child{grid-column:1/-1}.protocol-fieldset{display:flex;flex-wrap:wrap;gap:16px;border:1px solid var(--line);border-radius:10px;padding:13px}.protocol-fieldset legend{padding:0 7px;font-size:12px;font-weight:700}.reset-check{padding:11px 13px;background:#fff8e8;border-radius:9px;color:#79540d}
+.edit-user-button{white-space:nowrap}
+@media(max-width:900px){.side-nav{scroll-snap-type:x proximity}.side-nav::after{content:'‹';position:sticky;left:0;display:grid;place-items:center;min-width:28px;color:#fff;background:linear-gradient(90deg,var(--navy),transparent);pointer-events:none}.side-nav a{scroll-snap-align:start}.users-table{min-width:760px}}
+@media(max-width:600px){body{font-size:14px}.content{padding:13px}.panel-header{align-items:flex-start}.summary-strip>div{min-width:145px}.table-wrap{margin-left:-15px;margin-right:-15px;border-radius:0;border-right:0;border-left:0}.table-wrap::before{content:'برای دیدن ادامه جدول، به چپ بکشید ←';display:block;position:sticky;right:0;padding:9px 14px;background:#fbf7fc;color:var(--muted);font-size:11px;border-bottom:1px solid var(--line)}.table-wrap table{min-width:700px}.dialog-card{padding:19px}.dialog-form-grid{grid-template-columns:1fr}.dialog-form-grid label:first-child{grid-column:auto}.dialog-actions>*{flex:1}.topbar{gap:10px}.topbar p{font-size:11px}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important;animation-duration:.01ms!important;animation-iteration-count:1!important}}

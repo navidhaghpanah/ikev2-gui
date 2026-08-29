@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ورود — IKEv2</title>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700;800&display=swap">
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v='20260829-ui2') }}">
 </head>
 <body class="login-body">
   <form class="login-card" method="post">
@@ -17,8 +17,9 @@
     <label>نام کاربری پنل</label>
     <input name="user" autocomplete="username" autofocus>
     <label>رمز عبور</label>
-    <input name="password" type="password" autocomplete="current-password">
+    <span class="password-field"><input name="password" type="password" autocomplete="current-password"><button type="button" class="password-toggle" aria-label="نمایش رمز">نمایش</button></span>
     <button type="submit">ورود</button>
   </form>
+  <script src="/static/copy.js?v=20260829-ui2" defer></script>
 </body>
 </html>
