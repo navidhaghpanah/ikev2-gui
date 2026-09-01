@@ -1,6 +1,6 @@
 # Multi-VPN Panel
 
-پنل مدیریت فارسی برای VPN روی **Ubuntu 22.04 / 24.04**: IKEv2 (گواهی Let’s Encrypt + EAP-MSCHAPv2)، به‌همراه پشتیبانی اختیاری از **VLESS Reality**، **VMess (WS+TLS)**، **Shadowsocks 2022**، **Hysteria2**، **HTTP proxy** و **MTProto (mtg)** با مدیریت متمرکز کاربر.
+پنل مدیریت فارسی برای VPN روی **Ubuntu 22.04 / 24.04**: **IKEv2** (Let’s Encrypt + EAP-MSCHAPv2) و **L2TP/IPsec PSK**، به‌همراه **VLESS Reality**، **VMess (WS+TLS)**، **Shadowsocks 2022**، **Hysteria2**، **HTTP proxy** و **MTProto (mtg)**.
 
 ## ویکی تصویری
 
@@ -16,7 +16,7 @@
 
 - پنل مدیریتی فارسی و واکنش‌گرا با صفحات مستقل داشبورد، کاربران، نشست‌ها، کلاینت‌ها و تنظیمات
 - رابط 3x-ui: سایدبار چپ، تم روشن/تیره، FA/EN، پشتیبان/گزارش/ری‌استارت، و تیک IKEv2/L2TP هنگام ساخت کاربر
-- یک هویت (نام‌کاربری/رمز) مشترک برای IKEv2، VLESS Reality، VMess، Shadowsocks، Hysteria2، HTTP proxy و MTProto — هرکدام اختیاری، به‌ازای هر کاربر
+- یک هویت (نام‌کاربری/رمز) مشترک برای IKEv2، L2TP، VLESS Reality، VMess، Shadowsocks، Hysteria2، HTTP proxy و MTProto — هرکدام اختیاری، به‌ازای هر کاربر
 - کاربر جدید با **تاریخ انقضا** و **حجم (گیگابایت)** مشترک بین همه پروتکل‌ها
 - محدودیت تعداد دستگاه هم‌زمان به‌ازای هر کاربر (پیش‌فرض ۱)، روی همه‌ی پروتکل‌ها اعمال می‌شود
 - نمایش افراد آنلاین، نشست‌ها، ترافیک
@@ -154,6 +154,13 @@ sudo multivpn uninstall --yes
 Deploy گیت‌هاب اکشن (`DEPLOY_HOST` / `DEPLOY_USER` / `DEPLOY_SSH_KEY`) وقتی این سه secret ست نباشند skip می‌شود، fail نمی‌شود. تا آن موقع از همین CLI روی VPS آپدیت کن.
 
 
+
+## نویسندگان
+
+- **Navid Haghpanah** — سازنده
+- **Chief of Staff** — پنل، مستندات و انتشار
+
+صفحهٔ پروژه: GitHub Pages روی شاخه `docs/`.
 
 ## مجوز
 
