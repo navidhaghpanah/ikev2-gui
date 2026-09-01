@@ -83,7 +83,11 @@
 {% endif %}
 
 <section class="smart-rank-list">
-  <header class="panel-header"><div><h2>{{ t.smart_results }}</h2></div></header>
+  <header class="panel-header"><div><h2>{{ t.smart_results }}</h2>
+    {% if result.ai_changed %}<span class="recommended">{{ t.smart_ai_changed }}</span>
+    {% elif result.ai_status == 'ok' %}<span class="protocol">{{ t.smart_ai_kept }}</span>
+    {% endif %}
+  </div></header>
   {% if result.ranked %}
   {% for row in result.ranked %}
   <article class="smart-rank-card{% if row.rank == 1 %} is-first{% endif %}">
