@@ -14,6 +14,9 @@
 
 هر نصب Endpoint خودش را می‌خواهد؛ کلید داخل گیت نیست.
 
+پیش‌فرض فرم **فیلترینگ ایران** است (موبایل، سوگیری رتبه: Reality/Hysteria بالاتر، IKEv2/L2TP پایین‌تر). پروب ISP نیست؛ با `sudo multivpn update` همان snapshot عوض می‌شود.
+
+
 پنل مدیریت فارسی برای VPN روی **Ubuntu 22.04 / 24.04**: **IKEv2** (Let’s Encrypt + EAP-MSCHAPv2) و **L2TP/IPsec PSK**، به‌همراه **VLESS Reality**، **VMess (WS+TLS)**، **Shadowsocks 2022**، **Hysteria2**، **HTTP proxy** و **MTProto (mtg)**.
 
 ## امکانات
