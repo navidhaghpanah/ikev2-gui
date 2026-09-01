@@ -1,10 +1,19 @@
-IKEv2 — Windows
-===============
+IKEv2 + L2TP — Windows
+======================
 
+IKEv2 (pishnahadi)
 1) Install-IKEv2.bat ra double-click kon, Yes (Administrator).
 2) Settings > Network > VPN > IKEv2 > Connect
 3) User / pass = hesabi ke to panel sakhte shode.
    Server: __DOMAIN__
+
+L2TP / IPsec PSK
+1) Settings > Network > VPN > Add VPN
+2) Type: L2TP/IPsec with pre-shared key
+3) Server: __DOMAIN__
+4) PSK = kelide L2TP az Settings panel
+5) User / pass = haman hesab IKEv2
+   (checkbox L2TP ru user bayad tick bashe)
 
 Agar RasMan / error 1062:
   Check-Windows.bat ra ejra kon.
