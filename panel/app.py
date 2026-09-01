@@ -56,6 +56,38 @@ IPSEC_SECRETS = Path("/etc/ipsec.secrets")
 CHAP_SECRETS = Path("/etc/ppp/chap-secrets")
 IPSEC_CONF = Path("/etc/ipsec.conf")
 PPP_OPTS = Path("/etc/ppp/options.xl2tpd")
+
+DNS_PRESETS = (
+    ("shecan", "Shecan", ("178.22.122.100", "185.51.200.2")),
+    ("electro", "Electro", ("78.157.42.100", "78.157.42.101")),
+    ("cloudflare", "Cloudflare", ("1.1.1.1", "1.0.0.1")),
+    ("google", "Google", ("8.8.8.8", "8.8.4.4")),
+    ("quad9", "Quad9", ("9.9.9.9", "149.112.112.112")),
+    ("adguard", "AdGuard", ("94.140.14.14", "94.140.15.15")),
+)
+
+
+def match_dns_preset(parts):
+    got = tuple(str(p) for p in (parts or []))
+    for pid, label, ips in DNS_PRESETS:
+        if got == tuple(ips):
+            return pid
+    return "custom"
+
+
+def apply_tunnel_dns(parts):
+    if PPP_OPTS.exists():
+        text = PPP_OPTS.read_text(encoding="utf-8", errors="replace")
+        lines = [ln for ln in text.splitlines() if not ln.startswith("ms-dns ")]
+        for d in parts[:2]:
+            lines.append("ms-dns " + d)
+        PPP_OPTS.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    if IPSEC_CONF.exists() and parts:
+        conf = IPSEC_CONF.read_text(encoding="utf-8", errors="replace")
+        conf = re.sub(r"rightdns=.*", "rightdns=" + ",".join(parts[:2]), conf)
+        IPSEC_CONF.write_text(conf, encoding="utf-8")
+        run(["ipsec", "reload"])
+
 STROKE = Path("/usr/lib/ipsec/stroke")
 XRAY_SS_BIN = Path("/opt/panel-xray/xray")
 XRAY_SS_CONFIG = Path("/etc/panel-xray/config.json")
@@ -260,9 +292,10 @@ I18N = {
         "max_sess_h": "بین ۱ تا ۱۰؛ روی IKEv2، Shadowsocks و Hysteria2 اعمال می‌شود. نشست/دستگاه اضافه خودکار قطع می‌شود.",
         "save_cleanup": "ذخیره و پاک‌سازی",
         "card_dns": "DNS تونل",
-        "card_dns_p": "سرورهای DNS ارسال‌شده به کلاینت",
+        "card_dns_p": "DNS کلاینت‌های VPN. از دکمه‌ها انتخاب کنید یا IP دلخواه بگذارید.",
         "dns_addrs": "آدرس‌های DNS",
         "dns_h": "حداکثر چهار IP، جداشده با ویرگول",
+        "dns_presets": "انتخاب سریع",
         "save_dns": "ذخیره DNS",
         "card_profile": "پروفایل من",
         "card_profile_p": "نام و راه ارتباطی که فقط برای شما در پنل نمایش داده می‌شود",
@@ -645,9 +678,10 @@ I18N = {
         "max_sess_h": "1 to 10; applies to IKEv2, Shadowsocks and Hysteria2. Extra devices are dropped.",
         "save_cleanup": "Save and clean",
         "card_dns": "Tunnel DNS",
-        "card_dns_p": "DNS servers pushed to clients",
+        "card_dns_p": "DNS pushed to VPN clients. Pick a preset or type IPs.",
         "dns_addrs": "DNS addresses",
         "dns_h": "Up to four IPs, comma-separated",
+        "dns_presets": "Quick pick",
         "save_dns": "Save DNS",
         "card_profile": "My profile",
         "card_profile_p": "Name and contact shown only to you",
@@ -2614,6 +2648,9 @@ def settings():
     pending = session.get("totp_pending") or ""
     d["totp_secret"] = pending
     d["totp_otpauth"] = totp_otpauth(pending, admin.get("user") or "admin", d.get("host") or "") if pending and not d["totp_on"] else ""
+    dns_parts = list(cfg.get("dns") or [])
+    d["dns_preset"] = match_dns_preset(dns_parts)
+    d["dns_presets"] = [{"id": pid, "label": label, "dns": ",".join(ips)} for pid, label, ips in DNS_PRESETS]
     return render_template("settings.html", **d)
 
 
@@ -4373,17 +4410,7 @@ def settings_dns():
     cfg = load_config()
     cfg["dns"] = parts
     save_config(cfg)
-    if PPP_OPTS.exists():
-        text = PPP_OPTS.read_text(encoding="utf-8", errors="replace")
-        lines = [ln for ln in text.splitlines() if not ln.startswith("ms-dns ")]
-        for d in parts[:2]:
-            lines.append("ms-dns " + d)
-        PPP_OPTS.write_text("\n".join(lines) + "\n", encoding="utf-8")
-    if IPSEC_CONF.exists() and parts:
-        conf = IPSEC_CONF.read_text(encoding="utf-8", errors="replace")
-        conf = re.sub(r"rightdns=.*", "rightdns=" + ",".join(parts[:2]), conf)
-        IPSEC_CONF.write_text(conf, encoding="utf-8")
-        run(["ipsec", "reload"])
+    apply_tunnel_dns(parts)
     flash_t("dns_ok")
     return redirect(url_for("settings"))
 
