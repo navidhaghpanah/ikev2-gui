@@ -1,20 +1,31 @@
 #!/bin/bash
-# IKEv2 GUI installer
+# NH MultiVPN installer
 set -euo pipefail
 
-if [[ -t 1 ]]; then
-  C_HDR=$'\033[1;33m'
-  C_OK=$'\033[0;32m'
-  C_ERR=$'\033[1;31m'
-  C_DIM=$'\033[2m'
+# Color even under `sudo bash install.sh` (TERM stays). Opt out with NO_COLOR=1.
+if [[ -z "${NO_COLOR:-}" && "${TERM:-}" != "dumb" ]]; then
+  C_HDR=$'\033[1;38;5;178m'   # gold #d4af37-ish
+  C_OK=$'\033[1;38;5;49m'    # status green
+  C_ERR=$'\033[1;38;5;203m'
+  C_WARN=$'\033[1;38;5;214m'
+  C_DIM=$'\033[0;38;5;245m'
+  C_ASK=$'\033[1;38;5;229m'
   C_RST=$'\033[0m'
 else
-  C_HDR=; C_OK=; C_ERR=; C_DIM=; C_RST=
+  C_HDR=; C_OK=; C_ERR=; C_WARN=; C_DIM=; C_ASK=; C_RST=
 fi
-hdr() { printf '%s%s%s\n' "$C_HDR" "$*" "$C_RST"; }
-ok() { printf '%s%s%s\n' "$C_OK" "$*" "$C_RST"; }
-err() { printf '%s%s%s\n' "$C_ERR" "$*" "$C_RST" >&2; }
+hdr()  { printf '%s%s%s\n' "$C_HDR" "$*" "$C_RST"; }
+ok()   { printf '%s%s%s\n' "$C_OK" "$*" "$C_RST"; }
+err()  { printf '%s%s%s\n' "$C_ERR" "$*" "$C_RST" >&2; }
+warn() { printf '%s%s%s\n' "$C_WARN" "$*" "$C_RST" >&2; }
 hint() { printf '%s%s%s\n' "$C_DIM" "$*" "$C_RST"; }
+banner() {
+  echo
+  hdr "╔══════════════════════════════════════════╗"
+  hdr "║          NH MultiVPN  —  nasb            ║"
+  hdr "╚══════════════════════════════════════════╝"
+  echo
+}
 
 if [[ ${EUID:-$(id -u)} -ne 0 ]]; then
   err "in script bayad ba root ejra beshe: sudo bash install.sh"
@@ -53,10 +64,10 @@ ask() {
     return
   fi
   if [[ -n "$def" ]]; then
-    read -r -p "$prompt [$def]: " var || true
+    read -r -p "${C_ASK}${prompt}${C_RST} ${C_DIM}[$def]${C_RST}: " var || true
     printf '%s\n' "${var:-$def}"
   else
-    read -r -p "$prompt: " var || true
+    read -r -p "${C_ASK}${prompt}${C_RST}: " var || true
     printf '%s\n' "$var"
   fi
 }
@@ -67,7 +78,7 @@ ask_secret() {
     printf '%s\n' "$def"
     return
   fi
-  read -r -s -p "$prompt: " var || true
+  read -r -s -p "${C_ASK}${prompt}${C_RST}: " var || true
   echo
   if [[ -z "$var" && -n "$def" ]]; then
     printf '%s\n' "$def"
@@ -112,18 +123,14 @@ for f in "${need[@]}"; do
 done
 
 if [[ "${EXTRA_ONLY:-}" == "1" ]]; then
-  echo
-  hdr "=========================================="
-  hdr "   extra protocols (xray / hysteria / mtg)"
-  hdr "=========================================="
+  banner
+  hdr "extra protocols (xray / hysteria / mtg)"
   echo
   # Skip domain/SSL/ipsec/nginx. Jump to binary+unit+ufw provisioning below.
 else
 
-echo
-hdr "=========================================="
-hdr "   IKEv2 GUI  —  installer"
-hdr "=========================================="
+banner
+hint "Ubuntu 22.04 / 24.04  ·  IKEv2 + L2TP + Reality + VMess + SS + Hy2 + HTTP + MTProto"
 echo
 
 PUB_GUESS="$(curl -4 -fsS --max-time 8 https://ifconfig.me 2>/dev/null || hostname -I | awk '{print $1}')"
@@ -481,21 +488,21 @@ if [[ -n "$XRAY_ASSET" ]]; then
 
   tmp_dl="$(mktemp -d)"
   if [[ -x /opt/panel-xray/xray ]]; then
-    echo "xray-core ghablan nasb shode, skip download"
+    ok "xray-core ghablan nasb shode, skip download"
   elif curl -fsSL -o "$tmp_dl/xray.zip" "$XRAY_URL"; then
     unzip -oq "$tmp_dl/xray.zip" xray -d /opt/panel-xray
     chmod 0755 /opt/panel-xray/xray
-    echo "xray-core nasb shod"
+    ok "xray-core nasb shod"
   else
-    echo "hoshdar: download xray-core nashod — Shadowsocks/VLESS kar nemikone" >&2
+    warn "hoshdar: download xray-core nashod — Shadowsocks/VLESS kar nemikone"
   fi
   if [[ -x /opt/panel-hysteria/hysteria ]]; then
-    echo "hysteria2 ghablan nasb shode, skip download"
+    ok "hysteria2 ghablan nasb shode, skip download"
   elif curl -fsSL -o "$tmp_dl/hysteria" "$HY_URL"; then
     install -m 0755 "$tmp_dl/hysteria" /opt/panel-hysteria/hysteria
-    echo "hysteria2 nasb shod"
+    ok "hysteria2 nasb shod"
   else
-    echo "hoshdar: download hysteria2 nashod — Hysteria2 kar nemikone" >&2
+    warn "hoshdar: download hysteria2 nashod — Hysteria2 kar nemikone"
   fi
   rm -rf "$tmp_dl"
 
@@ -575,12 +582,12 @@ if [[ -n "$MTG_ASSET" ]]; then
       mtg_bin="$(find "$tmp_mtg" -type f -name mtg | head -n1)"
       if [[ -n "$mtg_bin" ]]; then
         install -m 0755 "$mtg_bin" /opt/panel-mtg/mtg
-        echo "mtg nasb shod"
+        ok "mtg nasb shod"
       else
-        echo "hoshdar: binary mtg tu archive nist" >&2
+        warn "hoshdar: binary mtg tu archive nist"
       fi
     else
-      echo "hoshdar: download mtg nashod — MTProto kar nemikone" >&2
+      warn "hoshdar: download mtg nashod — MTProto kar nemikone"
     fi
     rm -rf "$tmp_mtg"
   fi
@@ -675,17 +682,18 @@ print("clients stamped")
 PY
 
 echo
-hdr "=========================================="
-
+hdr "╔══════════════════════════════════════════╗"
+hdr "║            nasb tamom shod               ║"
+hdr "╚══════════════════════════════════════════╝"
+echo
 if [[ -f "$SCRIPT_DIR/scripts/multivpn" ]]; then
   install -m 0755 "$SCRIPT_DIR/scripts/multivpn" /usr/local/bin/multivpn
+  ok "CLI:     sudo multivpn update | status | uninstall"
 fi
-
-ok "Nasb tamom shod."
-ok "Panel:   https://${DOMAIN}"
-echo "Panel user: ${PANEL_USER}"
-echo "IKEv2:  server + Remote ID = ${DOMAIN}"
-echo "Windows: panel > download zip   ya  ${APP_DIR}/clients/out/Install-IKEv2.bat"
-echo "iOS:     panel > download profile ya  ${APP_DIR}/clients/out/IKEv2.mobileconfig"
-echo "CLI:     sudo multivpn update | status | uninstall"
-hdr "=========================================="
+ok  "Panel:   https://${DOMAIN}"
+hint "Panel user: ${PANEL_USER}"
+ok  "IKEv2:   server + Remote ID = ${DOMAIN}"
+ok  "L2TP:    haman user/pass + PSK (Settings)"
+hint "Windows: panel > download zip   ya  ${APP_DIR}/clients/out/Install-IKEv2.bat"
+hint "iOS:     panel > download profile ya  ${APP_DIR}/clients/out/IKEv2.mobileconfig"
+echo
