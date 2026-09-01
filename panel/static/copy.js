@@ -79,6 +79,12 @@ document.addEventListener('click', event => {
     document.getElementById('edit-user-ss').checked = editButton.dataset.ss === '1';
     document.getElementById('edit-user-hy').checked = editButton.dataset.hy === '1';
     document.getElementById('edit-user-vless').checked = editButton.dataset.vless === '1';
+    const vmess = document.getElementById('edit-user-vmess');
+    const http = document.getElementById('edit-user-http');
+    const mtg = document.getElementById('edit-user-mtg');
+    if (vmess) vmess.checked = editButton.dataset.vmess === '1';
+    if (http) http.checked = editButton.dataset.http === '1';
+    if (mtg) mtg.checked = editButton.dataset.mtg === '1';
     dialog.showModal();
   }
 });
