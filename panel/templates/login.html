@@ -3,15 +3,15 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>ورود — IKEv2</title>
+  <title>ورود — NH MultiVPN</title>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700;800&display=swap">
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v='20260829-ui2') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v='20260901-glass') }}">
 </head>
 <body class="login-body">
   <form class="login-card" method="post">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <div class="mark">VPN</div>
-    <h1>IKEv2</h1>
+    <div class="mark">NH</div>
+    <h1>ورود به NH MultiVPN</h1>
     <p class="muted">{{ host or 'پنل مدیریت کاربران' }}</p>
     {% if err %}<div class="alert bad">{{ err }}</div>{% endif %}
     <label>نام کاربری پنل</label>
@@ -20,6 +20,6 @@
     <span class="password-field"><input name="password" type="password" autocomplete="current-password"><button type="button" class="password-toggle" aria-label="نمایش رمز">نمایش</button></span>
     <button type="submit">ورود</button>
   </form>
-  <script src="/static/copy.js?v=20260829-ui2" defer></script>
+  <script src="/static/copy.js?v=20260901-glass" defer></script>
 </body>
 </html>

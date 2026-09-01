@@ -3,15 +3,15 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{ page_title }} — IKEv2</title>
+  <title>{{ page_title }} — NH MultiVPN</title>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap">
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v='20260829-ui2') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v='20260901-glass') }}">
 </head>
 <body>
   <aside class="sidebar">
-    <a class="brand" href="{{ url_for('index') }}" aria-label="داشبورد IKEv2">
-      <span class="brand-mark">I</span>
-      <span><strong>IKEv2 Panel</strong><small>مدیریت شبکه خصوصی</small></span>
+    <a class="brand" href="{{ url_for('index') }}" aria-label="داشبورد NH MultiVPN">
+      <span class="brand-mark">NH</span>
+      <span><strong>NH MultiVPN</strong><small>مدیریت شبکه خصوصی</small></span>
     </a>
     <div class="server-pill"><span class="status-pulse"></span><span><small>سرور فعال</small><b>{{ host }}</b></span></div>
     <nav class="side-nav" aria-label="منوی اصلی">
@@ -44,7 +44,7 @@
       <div class="dialog-actions"><button class="secondary-button" value="cancel">انصراف</button><button class="danger-button" value="confirm">تأیید</button></div>
     </form>
   </dialog>
-  <script src="{{ url_for('static', filename='copy.js', v='20260829-ui2') }}" defer></script>
+  <script src="{{ url_for('static', filename='copy.js', v='20260901-glass') }}" defer></script>
   {% block scripts %}{% endblock %}
 </body>
 </html>
