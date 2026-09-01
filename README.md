@@ -1,39 +1,44 @@
 # Multi-VPN Panel
 
-پنل مدیریت فارسی برای VPN روی **Ubuntu 22.04 / 24.04**: IKEv2 (گواهی Let’s Encrypt + EAP-MSCHAPv2)، به‌همراه پشتیبانی اختیاری از **VLESS + TLS**، **Shadowsocks (2022)** و **Hysteria2** با مدیریت متمرکز کاربر.
+پنل مدیریت فارسی برای VPN روی **Ubuntu 22.04 / 24.04**: IKEv2 (گواهی Let’s Encrypt + EAP-MSCHAPv2)، به‌همراه پشتیبانی اختیاری از **VLESS Reality**، **VMess (WS+TLS)**، **Shadowsocks 2022**، **Hysteria2**، **HTTP proxy** و **MTProto (mtg)** با مدیریت متمرکز کاربر.
 
 ## امکانات
 
 - پنل مدیریتی فارسی و واکنش‌گرا با صفحات مستقل داشبورد، کاربران، نشست‌ها، کلاینت‌ها و تنظیمات
-- یک هویت (نام‌کاربری/رمز) مشترک برای IKEv2، VLESS، Shadowsocks و Hysteria2 — هرکدام اختیاری، به‌ازای هر کاربر
+- یک هویت (نام‌کاربری/رمز) مشترک برای IKEv2، VLESS Reality، VMess، Shadowsocks، Hysteria2، HTTP proxy و MTProto — هرکدام اختیاری، به‌ازای هر کاربر
 - کاربر جدید با **تاریخ انقضا** و **حجم (گیگابایت)** مشترک بین همه پروتکل‌ها
 - محدودیت تعداد دستگاه هم‌زمان به‌ازای هر کاربر (پیش‌فرض ۱)، روی همه‌ی پروتکل‌ها اعمال می‌شود
 - نمایش افراد آنلاین، نشست‌ها، ترافیک
 - قطع دستی نشست و پاک‌سازی خودکار نشست‌های قدیمی با سقف قابل‌تنظیم برای هر کاربر
-- کد QR و لینک اتصال اختصاصی برای VLESS/Shadowsocks/Hysteria2 هر کاربر، به‌علاوه لینک اشتراک (subscription) قابل‌به‌روزرسانی
+- کد QR و لینک اتصال اختصاصی برای VLESS/VMess/Shadowsocks/Hysteria2/HTTP/MTProto هر کاربر، به‌علاوه لینک اشتراک (subscription) قابل‌به‌روزرسانی
 - پردازنده، RAM، بار سیستم
 - سرعت لحظه‌ای و مجموع دانلود/آپلود سرور، مشابه پارامترهای nload
-- تغییر PSK از پنل
+- تغییر PSK و دامنه IKEv2 / L2TP از پنل
 - DNS تونل
 - اسکریپت نصب تعاملی: دامنه، SSL، یوزر پنل، PSK
 
-## پروتکل‌های اضافه (VLESS / Shadowsocks / Hysteria2)
+## پروتکل‌های اضافه
 
-علاوه بر IKEv2، سه پروتکل زیر هم پشتیبانی می‌شوند. هر سه با همان کاربرِ پنل مدیریت می‌شوند و تاریخ انقضا، حجم و محدودیت دستگاه بین‌شان مشترک است.
+علاوه بر IKEv2 / L2TP، پروتکل‌های زیر با همان کاربر پنل مدیریت می‌شوند. تاریخ انقضا، حجم و محدودیت دستگاه بین‌شان مشترک است.
 
 | پروتکل | سرویس | پورت پیش‌فرض | احراز هویت |
 |---|---|---|---|
-| VLESS + TLS | `panel-shadowsocks.service` (xray-core) | TCP `8443` | UUID اختصاصی هر کاربر |
-| Shadowsocks 2022 | `panel-shadowsocks.service` (xray-core) | TCP/UDP از `8388` به بالا، یکی برای هر کاربر | کلید اختصاصی هر کاربر (`2022-blake3-aes-128-gcm`) |
+| VLESS Reality + vision | `panel-shadowsocks.service` (xray-core) | TCP `8443` | UUID + x25519 Reality (بدون Let’s Encrypt) |
+| VMess WS+TLS | همان xray | TCP `2053`، path `/vmess` | UUID؛ فقط اگر گواهی LE موجود باشد |
+| Shadowsocks 2022 | همان xray | TCP/UDP از `8388` به بالا، یکی برای هر کاربر | کلید `2022-blake3-aes-128-gcm` |
 | Hysteria2 | `panel-hysteria.service` | UDP `443` | نام‌کاربری/رمز، همان رمز IKEv2 |
+| HTTP proxy | همان xray | TCP `10809` | یوزر/پس پنل؛ بدون TLS |
+| MTProto | `panel-mtg.service` (sidecar 9seconds/mtg) | TCP `3128` | یک secret FakeTLS برای کل پنل |
 
 نکته‌ها:
 
-- **VLESS و Shadowsocks هر دو داخل یک نمونه‌ی `xray-core` اجرا می‌شوند** — یعنی سرویس `panel-shadowsocks` هر دو را با هم سرو می‌کند. VLESS یک پورت مشترک برای همه‌ی کاربران دارد (هر کلاینت با UUID خودش شناخته می‌شود)، ولی Shadowsocks-2022 به‌خاطر ساختار handshake برای هر کاربر یک پورت جدا می‌گیرد.
-- VLESS و Hysteria2 از همان گواهی Let’s Encrypt دامنه استفاده می‌کنند؛ تا وقتی گواهی صادر نشده باشد این دو بالا نمی‌آیند.
-- Hysteria2 روی UDP کار می‌کند، پس با nginx که TCP 443 را گرفته تداخلی ندارد. مبهم‌سازی (obfuscation) از نوع `salamander` فعال است.
-- کانفیگ هر سه را خود پنل (`panel/app.py`) از روی `users.json` می‌سازد و با هر تغییر کاربر به‌روز می‌کند — فایل‌ها را دستی ویرایش نکنید، بازنویسی می‌شوند.
-- از نسخه‌ی فعلی به بعد، `install.sh` باینری‌های `xray-core` و `hysteria` و یونیت‌های systemd هر دو را خودش نصب می‌کند. سرویس‌ها `ConditionPathExists` دارند، یعنی تا وقتی پنل کانفیگ‌شان را ننوشته باشد بی‌سروصدا اجرا نمی‌شوند.
+- **VLESS / VMess / Shadowsocks / HTTP داخل یک نمونه‌ی `xray-core` هستند** (`panel-shadowsocks`). Xray ورودی mtproto ندارد؛ MTProto با sidecar `mtg` مثل 3x-ui v3.3 بالا می‌آید.
+- VLESS Reality به گواهی دامنه نیاز ندارد. کلیدهای x25519 اولین بار که پنل کانفیگ xray را می‌نویسد ساخته می‌شوند و در `config.json` می‌مانند (`reality_private` / `reality_public` / `reality_short_id`). مقصد پیش‌فرض `www.microsoft.com:443`. لینک‌های قدیمی VLESS+TLS بعد از آپدیت کار نمی‌کنند — UUID همان است، کلاینت باید لینک Reality جدید را بگیرد.
+- VMess و Hysteria2 از گواهی Let’s Encrypt دامنه استفاده می‌کنند؛ تا وقتی گواهی نباشد VMess inbound ساخته نمی‌شود و Hysteria2 استارت نمی‌شود.
+- Hysteria2 روی UDP است، با nginx روی TCP 443 تداخل ندارد. مبهم‌سازی `salamander`.
+- دامنه IKEv2 / L2TP از تنظیمات پنل عوض می‌شود (`leftid` فقط روی `conn IKEv2-EAP`). xl2tpd ری‌استارت نمی‌شود. اگر certbot شکست بخورد دامنه باز هم ذخیره می‌شود.
+- کانفیگ‌ها را خود پنل از روی `users.json` می‌سازد — دستی ویرایش نکنید.
+- `install.sh` باینری‌های `xray-core`، `hysteria` و `mtg` (v2.2.8) را نصب می‌کند. روی پنل نصب‌شده، `sudo multivpn update` پنل را کپی می‌کند و `EXTRA_ONLY=1` همان باینری/فایروال/یونیت‌ها را بدون قطع تونل IKEv2 اعمال می‌کند.
 
 ## نصب
 
@@ -43,7 +48,10 @@
 |---|---|
 | TCP 80/443 | پنل، Let’s Encrypt |
 | UDP 500/4500/1701 | IKEv2 / L2TP |
-| TCP 8443 | VLESS + TLS |
+| TCP 8443 | VLESS Reality |
+| TCP 2053 | VMess WS+TLS |
+| TCP 10809 | HTTP proxy |
+| TCP 3128 | MTProto (mtg) |
 | UDP 443 | Hysteria2 |
 | TCP/UDP 8388 به بالا | Shadowsocks (یک پورت برای هر کاربر) |
 
@@ -112,8 +120,9 @@ sudo DOMAIN=vpn.example.com \
 | `/etc/ikev2-l2tp-gui` | config و ادمین |
 | `/var/lib/ikev2-l2tp-gui` | کاربران و ترافیک |
 | `/etc/ipsec.conf` `/etc/ipsec.secrets` | strongSwan |
-| `/opt/panel-xray` `/etc/panel-xray/config.json` | باینری و کانفیگ VLESS + Shadowsocks |
+| `/opt/panel-xray` `/etc/panel-xray/config.json` | باینری و کانفیگ VLESS Reality + VMess + SS + HTTP |
 | `/opt/panel-hysteria` `/etc/panel-hysteria/config.yaml` | باینری و کانفیگ Hysteria2 |
+| `/opt/panel-mtg` `/etc/panel-mtg/mtg.toml` | sidecar MTProto |
 
 حذف پنل: `sudo multivpn uninstall` یا `sudo bash uninstall.sh`
 ## CLI (update / uninstall)
@@ -121,7 +130,7 @@ sudo DOMAIN=vpn.example.com \
 بعد از نصب، دستور `multivpn` روی سرور است (از هر مسیر):
 
 ```bash
-sudo multivpn update            # git fetch main، کپی پنل، ری‌استارت GUI — تونل IKEv2 قطع نمی‌شود
+sudo multivpn update            # git fetch main، کپی پنل، extra protocols، ری‌استارت GUI — تونل IKEv2 قطع نمی‌شود
 sudo multivpn status
 sudo multivpn restart
 sudo multivpn logs -n 80
