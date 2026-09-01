@@ -1,24 +1,18 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="metrics-grid">
-  <article class="metric-card"><div class="metric-icon green"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M8.5 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM17 8l2 2 4-4"/></svg></div><div><span>{{ t.online_users }}</span><strong id="stat-online">{{ online_count }}</strong><small>{{ t.of_accounts % {'total': total} }}</small></div></article>
-  <article class="metric-card"><div class="metric-icon blue"><svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg></div><div><span>{{ t.active_sessions }}</span><strong id="stat-sessions">{{ sessions|length }}</strong><small>{{ t.ike_l2 }}</small></div></article>
-  <article class="metric-card"><div class="metric-icon violet"><svg viewBox="0 0 24 24"><path d="M4 17l6-6 4 4 6-8M18 7h2v2"/></svg></div><div><span>{{ t.sys_load }}</span><strong>{{ load_fa }}</strong><small>{{ t.cpu_cores % {'n': stats.cores} }}</small></div></article>
-  <article class="metric-card"><div class="metric-icon amber"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div><div><span>{{ t.uptime }}</span><strong class="metric-compact">{{ uptime_h }}</strong><small id="clock">{{ now_fa }}</small></div></article>
-</section>
 <section class="machine-strip" id="machine-strip">
-  <div class="ms-ip"><small>{{ t.server_ip }}</small><code class="copyable" id="server-ip" title="{{ t.copy_title }}">{{ public_ip or host or '—' }}</code></div>
-  <div class="ms-item"><small>{{ t.cpu }}</small><b id="stat-cpu">{{ cpu_fa }}٪</b></div>
-  <div class="ms-item"><small>{{ t.ram }}</small><b id="stat-ram">{{ mem_fa }}٪</b></div>
-  <div class="ms-item"><small>{{ t.disk }}</small><b>{{ disk_fa }}٪</b></div>
-  <div class="ms-item"><small>↓</small><b id="net-rx-total">{{ net_rx_h }}</b></div>
-  <div class="ms-item"><small>↑</small><b id="net-tx-total">{{ net_tx_h }}</b></div>
-  <div class="ms-item"><small>{{ t.down_speed }}</small><b id="net-down-speed">{{ net_down_h }}</b></div>
-  <div class="ms-item"><small>{{ t.up_speed }}</small><b id="net-up-speed">{{ net_up_h }}</b></div>
-  <form id="speed-form" class="ms-speed" data-run="{{ t.speed_run }}">
+  <code class="copyable ms-ip" id="server-ip" title="{{ t.copy_title }}">{{ public_ip or host or '—' }}</code>
+  <span class="ms-item"><small>{{ t.cpu }}</small><b id="stat-cpu">{{ cpu_fa }}٪</b></span>
+  <span class="ms-item"><small>{{ t.ram }}</small><b id="stat-ram">{{ mem_fa }}٪</b></span>
+  <span class="ms-item"><small>{{ t.disk }}</small><b>{{ disk_fa }}٪</b></span>
+  <span class="ms-item"><small>↓</small><b id="net-down-speed">{{ net_down_h }}</b></span>
+  <span class="ms-item"><small>↑</small><b id="net-up-speed">{{ net_up_h }}</b></span>
+  <span class="ms-item"><small>Σ↓</small><b id="net-rx-total">{{ net_rx_h }}</b></span>
+  <span class="ms-item"><small>Σ↑</small><b id="net-tx-total">{{ net_tx_h }}</b></span>
+  <form id="speed-form" class="ms-speed" data-run="{{ t.speed_test }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <button type="submit" id="speed-run">{{ t.speed_run }}</button>
-    <span id="speed-line" data-idle="{{ t.speed_idle }}" data-running="{{ t.speed_running }}" data-fail="{{ t.speed_fail }}" data-mbps="{{ t.mbps }}" data-ms="{{ t.ms }}" data-start="{{ t.speed_start }}" data-end="{{ t.speed_end }}">{% if speed_last and speed_last.down_mbps %}↓ {{ speed_last.down_mbps }} {{ t.mbps }} · ↑ {{ speed_last.up_mbps or '—' }} {{ t.mbps }} · {{ t.speed_start }} {{ speed_last.started or speed_last.at }} → {{ t.speed_end }} {{ speed_last.ended or speed_last.at }}{% else %}{{ t.speed_idle }}{% endif %}</span>
+    <button type="submit" id="speed-run">{{ t.speed_test }}</button>
+    <span id="speed-line" data-idle="{{ t.speed_idle }}" data-running="{{ t.speed_running }}" data-fail="{{ t.speed_fail }}" data-mbps="{{ t.mbps }}" data-ms="{{ t.ms }}" data-start="{{ t.speed_start }}" data-end="{{ t.speed_end }}">{% if speed_last and speed_last.down_mbps %}↓ {{ speed_last.down_mbps }} · ↑ {{ speed_last.up_mbps or '—' }} · {{ t.speed_start }} {{ speed_last.started or speed_last.at }} → {{ t.speed_end }} {{ speed_last.ended or speed_last.at }}{% else %}{{ t.speed_idle }}{% endif %}</span>
   </form>
 </section>
 <section class="dashboard-grid">
