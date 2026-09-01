@@ -2,16 +2,6 @@
 
 پنل مدیریت فارسی برای VPN روی **Ubuntu 22.04 / 24.04**: **IKEv2** (Let’s Encrypt + EAP-MSCHAPv2) و **L2TP/IPsec PSK**، به‌همراه **VLESS Reality**، **VMess (WS+TLS)**، **Shadowsocks 2022**، **Hysteria2**، **HTTP proxy** و **MTProto (mtg)**.
 
-## ویکی تصویری
-
-مشخصات پروتکل، پورت و هویت بصری — کامل به‌صورت تصویر. فهرست: [`docs/WIKI.md`](docs/WIKI.md)
-
-![پروتکل‌ها](docs/visual/protocols.png)
-
-![پورت‌ها](docs/visual/ports.png)
-
-![ظاهر پنل](docs/visual/appearance.png)
-
 ## امکانات
 
 - پنل مدیریتی فارسی و واکنش‌گرا با صفحات مستقل داشبورد، کاربران، نشست‌ها، کلاینت‌ها و تنظیمات
