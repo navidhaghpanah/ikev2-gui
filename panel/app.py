@@ -2,6 +2,7 @@
 # IKEv2 GUI — پنل مدیریت
 import base64
 import hashlib
+import hmac
 import io
 import ipaddress
 import json
@@ -9,6 +10,7 @@ import math
 import os
 import re
 import shutil
+import struct
 import socket
 import subprocess
 import threading
@@ -448,6 +450,19 @@ I18N = {
         "save_ai": "ذخیرهٔ تنظیمات مدل",
         "ai_ok": "تنظیمات مدل ذخیره شد.",
         "ai_base_bad": "Gateway URL نامعتبر است؛ فقط HTTPS عمومی، بدون اطلاعات ورود، localhost یا نشانی خصوصی.",
+        "card_totp": "Google Authenticator",
+        "card_totp_p": "ورود دو مرحله‌ای با برنامه Authenticator (Google / Aegis / Authy).",
+        "card_totp_on": "Authenticator فعال است. برای ورود علاوه بر رمز، کد ۶ رقمی لازم است.",
+        "totp_add": "افزودن Authenticator",
+        "totp_scan": "QR را با Authenticator اسکن کنید، یا کلید را دستی وارد کنید.",
+        "totp_code": "کد ۶ رقمی",
+        "totp_enable": "فعال کردن",
+        "totp_off": "خاموش کردن Authenticator",
+        "totp_off_confirm": "ورود دو مرحله‌ای خاموش شود؟",
+        "totp_ok": "Authenticator فعال شد.",
+        "totp_bad": "کد Authenticator نادرست است.",
+        "totp_disabled": "Authenticator خاموش شد.",
+        "login_totp": "کد Authenticator",
     },
     "en": {
         "brand_sub": "Private network admin",
@@ -820,6 +835,19 @@ I18N = {
         "save_ai": "Save model settings",
         "ai_ok": "Model settings saved.",
         "ai_base_bad": "Invalid Gateway URL; use public HTTPS with no credentials, localhost, or private addresses.",
+        "card_totp": "Google Authenticator",
+        "card_totp_p": "Two-factor login with an Authenticator app (Google / Aegis / Authy).",
+        "card_totp_on": "Authenticator is on. Login needs the 6-digit code as well as the password.",
+        "totp_add": "Add Authenticator",
+        "totp_scan": "Scan the QR with Authenticator, or type the key by hand.",
+        "totp_code": "6-digit code",
+        "totp_enable": "Enable",
+        "totp_off": "Turn off Authenticator",
+        "totp_off_confirm": "Turn off two-factor login?",
+        "totp_ok": "Authenticator enabled.",
+        "totp_bad": "Authenticator code is wrong.",
+        "totp_disabled": "Authenticator turned off.",
+        "login_totp": "Authenticator code",
     },
 }
 
@@ -1123,6 +1151,41 @@ def load_admin():
 
 def save_admin(data):
     save_json(ADMIN_FILE, data)
+
+
+def totp_new_secret():
+    return base64.b32encode(secrets.token_bytes(20)).decode("ascii").rstrip("=")
+
+
+def totp_at(secret, when):
+    pad = secret + "=" * ((8 - len(secret) % 8) % 8)
+    try:
+        key = base64.b32decode(pad, casefold=True)
+    except Exception:
+        return ""
+    counter = int(when // 30)
+    digest = hmac.new(key, struct.pack(">Q", counter), hashlib.sha1).digest()
+    offset = digest[-1] & 0x0F
+    num = struct.unpack(">I", digest[offset:offset + 4])[0] & 0x7FFFFFFF
+    return "%06d" % (num % 1000000)
+
+
+def totp_ok(secret, code):
+    digits = "".join(ch for ch in (code or "") if ch.isdigit())
+    if len(digits) != 6 or not secret:
+        return False
+    now = time.time()
+    for delta in (-1, 0, 1):
+        expected = totp_at(secret, now + delta * 30)
+        if expected and secrets.compare_digest(expected, digits):
+            return True
+    return False
+
+
+def totp_otpauth(secret, user, host):
+    label = urllib.parse.quote("NH MultiVPN:" + (user or "admin"), safe="")
+    issuer = urllib.parse.quote("NH MultiVPN", safe="")
+    return "otpauth://totp/%s?secret=%s&issuer=%s&period=30&digits=6" % (label, secret, issuer)
 
 
 def load_users():
@@ -2393,7 +2456,7 @@ def login():
         submitted = request.form.get("csrf_token", "")
         expected = session.get("csrf", "")
         if not expected or not secrets.compare_digest(submitted, expected):
-            return render_template("login.html", err=tr("login_csrf"), host=host), 400
+            return render_template("login.html", err=tr("login_csrf"), host=host, totp_on=bool(load_admin().get("totp_enabled") and load_admin().get("totp_secret"))), 400
         remote = (request.remote_addr or "").strip()
         forwarded = (request.headers.get("X-Real-IP") or "").strip()
         if forwarded and remote in ("127.0.0.1", "::1"):
@@ -2401,21 +2464,29 @@ def login():
         now = time.monotonic()
         attempts = [t for t in _login_attempts.get(remote, []) if now - t < LOGIN_WINDOW]
         if len(attempts) >= LOGIN_MAX_ATTEMPTS:
-            return render_template("login.html", err=tr("login_lock"), host=host), 429
+            return render_template("login.html", err=tr("login_lock"), host=host, totp_on=bool(load_admin().get("totp_enabled") and load_admin().get("totp_secret"))), 429
         admin = load_admin()
         user = (request.form.get("user") or "").strip()
         pw = request.form.get("password") or ""
+        totp_on = bool(admin.get("totp_enabled") and admin.get("totp_secret"))
         if user == admin.get("user") and admin.get("password") and check_password_hash(admin["password"], pw):
-            session.clear()
-            session["ok"] = True
-            session.permanent = True
-            _login_attempts.pop(remote, None)
-            resp = redirect(url_for("index"))
-            return set_ui_cookies(resp, current_theme(), current_lang())
-        attempts.append(now)
-        _login_attempts[remote] = attempts
-        err = tr("login_bad")
-    return render_template("login.html", err=err, host=host)
+            if totp_on and not totp_ok(admin.get("totp_secret") or "", request.form.get("totp") or ""):
+                attempts.append(now)
+                _login_attempts[remote] = attempts
+                err = tr("totp_bad")
+            else:
+                session.clear()
+                session["ok"] = True
+                session.permanent = True
+                _login_attempts.pop(remote, None)
+                resp = redirect(url_for("index"))
+                return set_ui_cookies(resp, current_theme(), current_lang())
+        else:
+            attempts.append(now)
+            _login_attempts[remote] = attempts
+            err = tr("login_bad")
+    totp_on = bool(load_admin().get("totp_enabled") and load_admin().get("totp_secret"))
+    return render_template("login.html", err=err, host=host, totp_on=totp_on)
 
 
 @app.route("/logout", methods=["POST"])
@@ -2538,6 +2609,11 @@ def settings():
     ai_key = (cfg.get("ai_api_key") or "").strip()
     d["ai_key_set"] = bool(ai_key)
     d["ai_key_masked"] = ("••••" + ai_key[-4:]) if len(ai_key) >= 4 else ("••••" if ai_key else "")
+    admin = load_admin()
+    d["totp_on"] = bool(admin.get("totp_enabled") and admin.get("totp_secret"))
+    pending = session.get("totp_pending") or ""
+    d["totp_secret"] = pending
+    d["totp_otpauth"] = totp_otpauth(pending, admin.get("user") or "admin", d.get("host") or "") if pending and not d["totp_on"] else ""
     return render_template("settings.html", **d)
 
 
@@ -4324,6 +4400,54 @@ def settings_admin():
     data["password"] = generate_password_hash(pw)
     save_admin(data)
     flash_t("admin_ok")
+    return redirect(url_for("settings"))
+
+
+
+@app.route("/settings/totp/start", methods=["POST"])
+@login_required
+@csrf_required
+def settings_totp_start():
+    admin = load_admin()
+    if admin.get("totp_enabled") and admin.get("totp_secret"):
+        return redirect(url_for("settings"))
+    session["totp_pending"] = totp_new_secret()
+    return redirect(url_for("settings"))
+
+
+@app.route("/settings/totp/confirm", methods=["POST"])
+@login_required
+@csrf_required
+def settings_totp_confirm():
+    pending = session.get("totp_pending") or ""
+    if not pending:
+        return redirect(url_for("settings"))
+    if not totp_ok(pending, request.form.get("totp") or ""):
+        flash_t("totp_bad")
+        return redirect(url_for("settings"))
+    data = load_admin()
+    data["totp_secret"] = pending
+    data["totp_enabled"] = True
+    save_admin(data)
+    session.pop("totp_pending", None)
+    flash_t("totp_ok")
+    return redirect(url_for("settings"))
+
+
+@app.route("/settings/totp/off", methods=["POST"])
+@login_required
+@csrf_required
+def settings_totp_off():
+    data = load_admin()
+    secret = data.get("totp_secret") or ""
+    if not totp_ok(secret, request.form.get("totp") or ""):
+        flash_t("totp_bad")
+        return redirect(url_for("settings"))
+    data["totp_enabled"] = False
+    data["totp_secret"] = ""
+    save_admin(data)
+    session.pop("totp_pending", None)
+    flash_t("totp_disabled")
     return redirect(url_for("settings"))
 
 
