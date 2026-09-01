@@ -1,6 +1,18 @@
 # Multi-VPN Panel
 
-**AI** — اتصال هوشمند (Smart Connect) با AIaaS ابر آروان: رتبهٔ بهترین پروتکل از موجودی VPS و شرایط کلاینت؛ مدل می‌تواند ترتیب را عوض کند. بدون کلید هم کار می‌کند.
+## AI — اتصال هوشمند (Smart Connect)
+
+[![AI Smart Connect](https://img.shields.io/badge/AI-Smart%20Connect-d4af37?style=for-the-badge)](https://github.com/navidhaghpanah/multivpn-panel/releases)
+[![Release](https://img.shields.io/github/v/release/navidhaghpanah/multivpn-panel?style=for-the-badge&color=111111)](https://github.com/navidhaghpanah/multivpn-panel/releases)
+
+**AI** با AIaaS ابر آروان رتبهٔ بهترین پروتکل را از موجودی همین VPS و شرایط کلاینت می‌چیند و می‌تواند ترتیب را عوض کند. بدون کلید هم کار می‌کند. نه پروب ISP، نه `napi.arvancloud.ir`.
+
+1. در پنل آروان: محصول **AIaaS** → Endpoint چت ارزان (مثلاً GPT-4o-mini)
+2. کپی کنید: **Gateway URL** کامل (معمولاً `/v1`)، **API key**، شناسهٔ دقیق **model**
+3. در پنل: **تنظیمات → اتصال هوشمند — مدل** → ذخیره
+4. صفحهٔ **اتصال هوشمند** — اگر کلید باشد مدل رتبه را چک می‌کند و می‌تواند عوضش کند
+
+هر نصب Endpoint خودش را می‌خواهد؛ کلید داخل گیت نیست.
 
 پنل مدیریت فارسی برای VPN روی **Ubuntu 22.04 / 24.04**: **IKEv2** (Let’s Encrypt + EAP-MSCHAPv2) و **L2TP/IPsec PSK**، به‌همراه **VLESS Reality**، **VMess (WS+TLS)**، **Shadowsocks 2022**، **Hysteria2**، **HTTP proxy** و **MTProto (mtg)**.
 
@@ -92,18 +104,7 @@ sudo DOMAIN=vpn.example.com \
   bash install.sh
 ```
 
-بعد از نصب: `https://دامنه`
-
-## اتصال هوشمند و AI
-
-رتبهٔ پروتکل **بدون کلید هم کار می‌کند**. اگر بخواهید مدل همان کاندیداها را بازبینی کند و در صورت نیاز ترتیب/امتیاز را عوض کند، هر کسی که پنل را نصب می‌کند Endpoint **خودش** را از AIaaS ابر آروان می‌سازد و در تنظیمات می‌چسباند. کلید یا Gateway داخل گیت و نصب پیش‌فرض نیست.
-
-1. در پنل آروان: محصول **AIaaS** (نه Machine User / `napi.arvancloud.ir`) → یک Endpoint چت ارزان بسازید، مثلاً کلاس GPT-4o-mini / Gemini Flash / Llama 8B
-2. از همان Endpoint کپی کنید: **Gateway URL** کامل (معمولاً با `/v1`)، **API key**، شناسهٔ دقیق **model** همان لیست
-3. در پنل NH MultiVPN: **تنظیمات → اتصال هوشمند — مدل** این سه فیلد را بچسبانید و ذخیره کنید
-4. صفحهٔ **اتصال هوشمند** را بزنید؛ اگر کلید باشد مدل رتبه را چک می‌کند و می‌تواند عوضش کند. Timeout یا خطا → همان رتبهٔ قاعده‌ای می‌ماند
-
-کلید را در چت، README یا اسکرین‌شات عمومی نگذارید. هر نصب Gateway و کلید خودش را می‌خواهد.
+بعد از نصب: `https://دامنه` — وصل کردن **AI**: بخش [AI — اتصال هوشمند](#ai--اتصال-هوشمند-smart-connect) بالای همین صفحه.
 
 ## اتصال کلاینت
 
