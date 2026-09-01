@@ -1,0 +1,198 @@
+#!/usr/bin/env bash
+# Multi-VPN Panel CLI — update / uninstall / status az command line.
+# Tunnel-haye IKEv2/L2TP ro update nemikosh-e (faghat service-e panel).
+set -euo pipefail
+
+APP_DIR="${APP_DIR:-/opt/ikev2-l2tp-gui}"
+CFG_DIR="${CFG_DIR:-/etc/ikev2-l2tp-gui}"
+DATA_DIR="${DATA_DIR:-/var/lib/ikev2-l2tp-gui}"
+REPO_DIR="${REPO_DIR:-/opt/ikev2-gui-src}"
+REPO_URL="${REPO_URL:-https://github.com/navidhaghpanah/multivpn-panel.git}"
+PANEL_UNIT="${PANEL_UNIT:-ikev2-l2tp-gui}"
+CLI_BIN="/usr/local/bin/multivpn"
+
+die() { echo "$*" >&2; exit 1; }
+need_root() {
+  if [[ ${EUID:-$(id -u)} -ne 0 ]]; then
+    die "ba root: sudo multivpn $*"
+  fi
+}
+
+usage() {
+  cat <<'H'
+multivpn — CLI-e panel (Ubuntu)
+
+  sudo multivpn update [branch]   panel ro az GitHub update mikone (default: main)
+                                  tunnel IKEv2/L2TP drop nemishe
+  sudo multivpn uninstall [--yes]  panel + nginx site + systemd unit
+                                  /etc va /var/lib panel baraye backup mimune
+  sudo multivpn restart            faghat service-e panel
+  sudo multivpn status             panel, nginx, strongSwan, xray/hysteria age hast
+  sudo multivpn logs [-n 80]       journalctl panel
+  sudo multivpn version            commit-e local repo + file-haye panel
+  sudo multivpn install-cli        in script ro mizare too /usr/local/bin/multivpn
+
+Env (optional): APP_DIR CFG_DIR DATA_DIR REPO_DIR REPO_URL PANEL_UNIT
+H
+}
+
+cmd_install_cli() {
+  need_root "install-cli"
+  local src
+  src="$(readlink -f "${BASH_SOURCE[0]}")"
+  install -m 0755 "$src" "$CLI_BIN"
+  echo "OK: $CLI_BIN"
+  echo "az har ja: sudo multivpn update"
+}
+
+ensure_repo() {
+  local branch="$1"
+  if [[ ! -d "$REPO_DIR/.git" ]]; then
+    echo "clone $REPO_URL -> $REPO_DIR ($branch)"
+    git clone --branch "$branch" "$REPO_URL" "$REPO_DIR"
+  fi
+  cd "$REPO_DIR"
+  git fetch origin "$branch"
+  git checkout "$branch"
+  git reset --hard "origin/$branch"
+}
+
+cmd_update() {
+  need_root "update"
+  local branch="${1:-main}"
+  command -v git >/dev/null || die "git nasb nist: apt-get install -y git"
+  command -v python3 >/dev/null || die "python3 nasb nist"
+  if [[ ! -d "$APP_DIR" ]]; then
+    die "panel nasb nist ($APP_DIR nist). aval: sudo bash install.sh"
+  fi
+
+  ensure_repo "$branch"
+
+  if [[ -f "$REPO_DIR/scripts/deploy.sh" ]]; then
+    echo "update ba scripts/deploy.sh $branch"
+    bash "$REPO_DIR/scripts/deploy.sh" "$branch"
+    return
+  fi
+
+  python3 -c "import ast; ast.parse(open('panel/app.py').read())"
+  cp -a "$REPO_DIR/panel/." "$APP_DIR/"
+  rm -f "$APP_DIR/ikev2-l2tp-gui.service"
+  if [[ -d "$REPO_DIR/clients" ]]; then
+    rm -rf "$APP_DIR/clients"
+    cp -a "$REPO_DIR/clients" "$APP_DIR/clients"
+  fi
+  # CLI khodesh ro ham refresh kon
+  if [[ -f "$REPO_DIR/scripts/multivpn" ]]; then
+    install -m 0755 "$REPO_DIR/scripts/multivpn" "$CLI_BIN"
+  fi
+  systemctl restart "$PANEL_UNIT"
+  sleep 1
+  if systemctl is-active --quiet "$PANEL_UNIT"; then
+    echo "panel restarted OK ($branch)"
+  else
+    die "panel start nashod. journalctl -u $PANEL_UNIT -n 50"
+  fi
+}
+
+cmd_uninstall() {
+  need_root "uninstall"
+  local yes=0
+  if [[ "${1:-}" == "--yes" || "${1:-}" == "-y" ]]; then
+    yes=1
+  fi
+  if [[ $yes -ne 1 ]]; then
+    read -r -p "panel uninstall beshe? user-haye VPN pak NEMISHAN. [y/N] " a || true
+    [[ "$a" == "y" || "$a" == "Y" ]] || die "cancel"
+  fi
+
+  local src=""
+  if [[ -f "$REPO_DIR/uninstall.sh" ]]; then
+    src="$REPO_DIR/uninstall.sh"
+  elif [[ -f "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../uninstall.sh" ]]; then
+    src="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)/uninstall.sh"
+  fi
+  if [[ -n "$src" ]]; then
+    bash "$src"
+  else
+    systemctl disable --now "$PANEL_UNIT" 2>/dev/null || true
+    rm -f /etc/nginx/sites-enabled/ikev2-l2tp-gui /etc/nginx/sites-available/ikev2-l2tp-gui
+    rm -f /etc/systemd/system/ikev2-l2tp-gui.service
+    rm -f /etc/ppp/ip-up.d/ikev2-l2tp-gui /etc/ppp/ip-down.d/ikev2-l2tp-gui
+    rm -rf "$APP_DIR"
+    systemctl restart nginx 2>/dev/null || true
+    systemctl daemon-reload
+    echo "Panel hazf shod. Data: $CFG_DIR va $DATA_DIR mond."
+  fi
+  # protocol-haye extra age PR #4 / SS / Hysteria nasb shode
+  systemctl disable --now panel-shadowsocks panel-hysteria 2>/dev/null || true
+  rm -f "$CLI_BIN"
+  echo "CLI ham az $CLI_BIN hazf shod."
+}
+
+cmd_restart() {
+  need_root "restart"
+  systemctl restart "$PANEL_UNIT"
+  systemctl is-active --quiet "$PANEL_UNIT" || die "panel start nashod"
+  echo "panel restart OK"
+}
+
+cmd_status() {
+  echo "APP_DIR=$APP_DIR"
+  echo "REPO_DIR=$REPO_DIR"
+  echo
+  for u in "$PANEL_UNIT" nginx strongswan-starter xl2tpd panel-shadowsocks panel-hysteria; do
+    if systemctl list-unit-files "$u.service" >/dev/null 2>&1; then
+      printf '%-22s %s\n' "$u" "$(systemctl is-active "$u" 2>/dev/null || echo n/a)"
+    fi
+  done
+  if [[ -d "$REPO_DIR/.git" ]]; then
+    echo
+    git -C "$REPO_DIR" log -1 --format='repo: %h %ci %s' 2>/dev/null || true
+  fi
+  if [[ -f "$CFG_DIR/config.json" ]]; then
+    python3 - << PY
+import json
+from pathlib import Path
+c=json.loads(Path("$CFG_DIR/config.json").read_text())
+print("domain:", c.get("domain"), "ip:", c.get("public_ip"))
+PY
+  fi
+}
+
+cmd_logs() {
+  local n=80
+  if [[ "${1:-}" == "-n" ]]; then
+    n="${2:-80}"
+  elif [[ "${1:-}" =~ ^[0-9]+$ ]]; then
+    n="$1"
+  fi
+  journalctl -u "$PANEL_UNIT" -n "$n" --no-pager
+}
+
+cmd_version() {
+  if [[ -d "$REPO_DIR/.git" ]]; then
+    git -C "$REPO_DIR" rev-parse --abbrev-ref HEAD
+    git -C "$REPO_DIR" log -1 --format='%h %ci %s'
+  else
+    echo "repo clone nist ($REPO_DIR)"
+  fi
+  [[ -f "$APP_DIR/app.py" ]] && echo "app.py: $(wc -c < "$APP_DIR/app.py") bytes"
+}
+
+main() {
+  local cmd="${1:-help}"
+  shift || true
+  case "$cmd" in
+    update|up) cmd_update "${1:-main}" ;;
+    uninstall|remove) cmd_uninstall "${1:-}" ;;
+    restart) cmd_restart ;;
+    status|st) cmd_status ;;
+    logs|log) cmd_logs "$@" ;;
+    version|ver) cmd_version ;;
+    install-cli) cmd_install_cli ;;
+    -h|--help|help) usage ;;
+    *) usage; die "command namaloom: $cmd" ;;
+  esac
+}
+
+main "$@"

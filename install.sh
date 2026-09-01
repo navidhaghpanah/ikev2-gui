@@ -79,6 +79,7 @@ need=(
   "$SCRIPT_DIR/clients/windows/RAHNAMA.txt"
   "$SCRIPT_DIR/clients/ios/IKEv2.mobileconfig"
   "$SCRIPT_DIR/clients/ios/RAHNAMA.txt"
+  "$SCRIPT_DIR/scripts/multivpn"
 )
 for f in "${need[@]}"; do
   if [[ ! -f "$f" ]]; then
@@ -140,7 +141,7 @@ apt-get update -y
 apt-get install -y \
   strongswan strongswan-pki libcharon-extra-plugins libstrongswan-extra-plugins \
   libstrongswan-standard-plugins xl2tpd ppp iptables iptables-persistent \
-  certbot nginx python3-flask gunicorn curl openssl
+  certbot nginx python3-flask gunicorn curl openssl unzip
 
 BACKUP_DIR="$BACKUP_ROOT/$(date +%Y%m%d-%H%M%S)"
 for f in /etc/ipsec.conf /etc/ipsec.secrets /etc/xl2tpd/xl2tpd.conf /etc/ppp/options.xl2tpd \
@@ -426,6 +427,106 @@ fi
 ln -sfn /etc/nginx/sites-available/ikev2-l2tp-gui /etc/nginx/sites-enabled/ikev2-l2tp-gui
 rm -f /etc/nginx/sites-enabled/default
 
+# --- Shadowsocks / VLESS (xray-core) and Hysteria2 binaries + units ---------
+# The panel generates the config files for these from users.json and starts or
+# stops the services itself. The units carry ConditionPathExists so that an
+# enabled-but-unconfigured service is skipped cleanly instead of crash-looping.
+case "$(uname -m)" in
+  x86_64)  XRAY_ASSET="Xray-linux-64.zip";        HY_ASSET="hysteria-linux-amd64" ;;
+  aarch64) XRAY_ASSET="Xray-linux-arm64-v8a.zip"; HY_ASSET="hysteria-linux-arm64" ;;
+  *) echo "arch $(uname -m) pshtibani nemishe baraye Shadowsocks/VLESS/Hysteria2" >&2
+     XRAY_ASSET=""; HY_ASSET="" ;;
+esac
+
+if [[ -n "$XRAY_ASSET" ]]; then
+  install -d /opt/panel-xray /etc/panel-xray /opt/panel-hysteria /etc/panel-hysteria
+  chmod 700 /etc/panel-xray /etc/panel-hysteria
+
+  XRAY_URL="${XRAY_URL:-https://github.com/XTLS/Xray-core/releases/latest/download/${XRAY_ASSET}}"
+  HY_URL="${HY_URL:-https://github.com/apernet/hysteria/releases/latest/download/${HY_ASSET}}"
+
+  tmp_dl="$(mktemp -d)"
+  if curl -fsSL -o "$tmp_dl/xray.zip" "$XRAY_URL"; then
+    unzip -oq "$tmp_dl/xray.zip" xray -d /opt/panel-xray
+    chmod 0755 /opt/panel-xray/xray
+    echo "xray-core nasb shod"
+  else
+    echo "hoshdar: download xray-core nashod — Shadowsocks/VLESS kar nemikone" >&2
+  fi
+  if curl -fsSL -o "$tmp_dl/hysteria" "$HY_URL"; then
+    install -m 0755 "$tmp_dl/hysteria" /opt/panel-hysteria/hysteria
+    echo "hysteria2 nasb shod"
+  else
+    echo "hoshdar: download hysteria2 nashod — Hysteria2 kar nemikone" >&2
+  fi
+  rm -rf "$tmp_dl"
+
+  cat > /etc/systemd/system/panel-shadowsocks.service << 'EOF'
+[Unit]
+Description=Panel Shadowsocks/VLESS (xray-core)
+After=network.target
+ConditionPathExists=/etc/panel-xray/config.json
+
+[Service]
+Type=simple
+ExecStart=/opt/panel-xray/xray run -config /etc/panel-xray/config.json
+Restart=on-failure
+RestartSec=5
+User=root
+UMask=0077
+LimitNOFILE=65535
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=full
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+  cat > /etc/systemd/system/panel-hysteria.service << 'EOF'
+[Unit]
+Description=Panel Hysteria2
+After=network.target
+ConditionPathExists=/etc/panel-hysteria/config.yaml
+
+[Service]
+Type=simple
+ExecStart=/opt/panel-hysteria/hysteria server -c /etc/panel-hysteria/config.yaml
+WorkingDirectory=/etc/panel-hysteria
+Restart=on-failure
+RestartSec=5
+User=root
+UMask=0077
+LimitNOFILE=65535
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=full
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+
+[Install]
+WantedBy=multi-user.target
+EOF
+fi
+
+# Open the extra protocol ports only when a firewall is actually managing them.
+if command -v ufw >/dev/null 2>&1 && ufw status 2>/dev/null | grep -q "Status: active"; then
+  ufw allow 8443/tcp  >/dev/null 2>&1 || true   # VLESS + TLS
+  ufw allow 443/udp   >/dev/null 2>&1 || true   # Hysteria2 (QUIC)
+  ufw allow 8388:8888/tcp >/dev/null 2>&1 || true   # per-user Shadowsocks (ss_next_port starts at 8388)
+  ufw allow 8388:8888/udp >/dev/null 2>&1 || true
+fi
+
 cp "$APP_DIR/ikev2-l2tp-gui.service" /etc/systemd/system/ikev2-l2tp-gui.service
 systemctl daemon-reload
 systemctl enable xl2tpd strongswan-starter ikev2-l2tp-gui nginx >/dev/null
@@ -460,10 +561,16 @@ PY
 
 echo
 echo "=========================================="
+
+if [[ -f "$SCRIPT_DIR/scripts/multivpn" ]]; then
+  install -m 0755 "$SCRIPT_DIR/scripts/multivpn" /usr/local/bin/multivpn
+fi
+
 echo "Nasb tamom shod."
 echo "Panel:   https://${DOMAIN}"
 echo "Panel user: ${PANEL_USER}"
 echo "IKEv2:  server + Remote ID = ${DOMAIN}"
 echo "Windows: panel > download zip   ya  ${APP_DIR}/clients/out/Install-IKEv2.bat"
 echo "iOS:     panel > download profile ya  ${APP_DIR}/clients/out/IKEv2.mobileconfig"
+echo "CLI:     sudo multivpn update | status | uninstall"
 echo "=========================================="
