@@ -2,7 +2,14 @@
 {% block content %}
 <section class="settings-grid">
   <article class="panel settings-card"><header class="settings-heading"><span class="settings-icon blue">↔</span><div><h2>{{ t.card_sessions }}</h2><p>{{ t.card_sessions_p }}</p></div></header><form method="post" action="{{ url_for('settings_sessions') }}" class="settings-form"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><label><span>{{ t.max_sess }}</span><input name="max_sessions_per_user" type="number" min="1" max="10" value="{{ max_sessions_per_user }}" required><small>{{ t.max_sess_h }}</small></label><button class="primary-button" type="submit">{{ t.save_cleanup }}</button></form></article>
-  <article class="panel settings-card"><header class="settings-heading"><span class="settings-icon green">DNS</span><div><h2>{{ t.card_dns }}</h2><p>{{ t.card_dns_p }}</p></div></header><form method="post" action="{{ url_for('settings_dns') }}" class="settings-form"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><label><span>{{ t.dns_addrs }}</span><input name="dns" dir="ltr" value="{{ dns }}" required><small>{{ t.dns_h }}</small></label><button class="secondary-button" type="submit">{{ t.save_dns }}</button></form></article>
+  <article class="panel settings-card"><header class="settings-heading"><span class="settings-icon green">DNS</span><div><h2>{{ t.card_dns }}</h2><p>{{ t.card_dns_p }}</p></div></header>
+    <div class="dns-presets" role="group" aria-label="{{ t.dns_presets }}">
+      {% for p in dns_presets %}
+      <form method="post" action="{{ url_for('settings_dns') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="dns" value="{{ p.dns }}"><button type="submit" class="dns-chip{{ ' active' if dns_preset == p.id else '' }}">{{ p.label }}</button></form>
+      {% endfor %}
+    </div>
+    <form method="post" action="{{ url_for('settings_dns') }}" class="settings-form"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><label><span>{{ t.dns_addrs }}</span><input name="dns" dir="ltr" value="{{ dns }}" required><small>{{ t.dns_h }}</small></label><button class="secondary-button" type="submit">{{ t.save_dns }}</button></form>
+  </article>
   <article class="panel settings-card"><header class="settings-heading"><span class="settings-icon violet">P</span><div><h2>{{ t.card_profile }}</h2><p>{{ t.card_profile_p }}</p></div></header><form method="post" action="{{ url_for('settings_profile') }}" class="settings-form"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><label><span>{{ t.display_name }}</span><input name="display_name" dir="{{ content_dir }}" value="{{ profile_display_name }}" maxlength="64"></label><label><span>{{ t.contact }}</span><input name="contact" dir="ltr" value="{{ profile_contact }}" maxlength="128" placeholder="@telegram"></label><button class="secondary-button" type="submit">{{ t.save_profile }}</button></form></article>
   <article class="panel settings-card"><header class="settings-heading"><span class="settings-icon violet">●</span><div><h2>{{ t.card_admin }}</h2><p>{{ t.card_admin_p % {'user': admin_user} }}</p></div></header><form method="post" action="{{ url_for('settings_admin') }}" class="settings-form"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><label><span>{{ t.admin_pass }}</span><span class="password-field"><input name="password" type="password" dir="ltr" placeholder="{{ t.admin_pass_ph }}" required minlength="12" maxlength="128" autocomplete="new-password"><button type="button" class="password-toggle" aria-label="{{ t.show_pass }}">{{ t.show_pass }}</button></span><small>{{ t.admin_pass_h }}</small></label><button class="secondary-button" type="submit">{{ t.change_admin }}</button></form></article>
   <article class="panel settings-card"><header class="settings-heading"><span class="settings-icon amber">2FA</span><div><h2>{{ t.card_totp }}</h2><p>{% if totp_on %}{{ t.card_totp_on }}{% else %}{{ t.card_totp_p }}{% endif %}</p></div></header>
@@ -38,7 +45,7 @@
 {% endblock %}
 {% block scripts %}
 {% if totp_otpauth %}
-<script src="{{ url_for('static', filename='qrious.min.js', v='20260901-icon') }}"></script>
+<script src="{{ url_for('static', filename='qrious.min.js', v='20260901-dns') }}"></script>
 <script>
 (function () {
   var el = document.getElementById('totp-qr');
