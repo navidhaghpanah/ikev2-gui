@@ -10,8 +10,11 @@ function setGauge(id, valuePct) {
   if (!el) return;
   const pctv = Math.max(0, Math.min(100, Number(valuePct) || 0));
   el.setAttribute('data-pct', String(pctv));
-  const hand = el.querySelector('.g-hand');
-  if (hand) hand.setAttribute('transform', 'rotate(' + (-135 + 2.7 * pctv) + ' 32 32)');
+  el.classList.toggle('hot', pctv >= 85);
+  const needle = el.querySelector('.g-needle');
+  if (needle) needle.setAttribute('transform', 'rotate(' + (-135 + 2.7 * pctv) + ' 36 34)');
+  const arc = el.querySelector('.g-arc');
+  if (arc) arc.setAttribute('stroke-dasharray', ((pctv / 100) * 122.52) + ' 200');
 }
 
 function mbpsNeedle(mbps, maxMbps) {
