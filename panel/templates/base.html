@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{ page_title }} — NH MultiVPN</title>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;800&display=swap">
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v='20260901-clock') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v='20260901-fit') }}">
 </head>
-<body data-lang="{{ lang }}" data-copied="{{ t.copied }}" data-show-pass="{{ t.show_pass }}" data-hide-pass="{{ t.hide_pass }}" data-working="{{ t.working }}" data-stale="{{ t.stale }}" data-live="{{ t.live }}">
+<body class="page-{{ page }}" data-lang="{{ lang }}" data-copied="{{ t.copied }}" data-show-pass="{{ t.show_pass }}" data-hide-pass="{{ t.hide_pass }}" data-working="{{ t.working }}" data-stale="{{ t.stale }}" data-live="{{ t.live }}">
   <div class="sidebar-backdrop" data-sidebar-backdrop hidden></div>
   <aside class="sidebar" id="app-sidebar">
     <a class="brand" href="{{ url_for('index') }}" aria-label="NH MultiVPN">
@@ -70,8 +70,8 @@
       <div class="dialog-actions"><button class="secondary-button" value="cancel">{{ t.cancel }}</button><button class="danger-button" value="confirm">{{ t.confirm }}</button></div>
     </form>
   </dialog>
-  <script src="{{ url_for('static', filename='copy.js', v='20260901-clock') }}" defer></script>
-  <script src="{{ url_for('static', filename='dashboard.js', v='20260901-clock') }}" defer></script>
+  <script src="{{ url_for('static', filename='copy.js', v='20260901-fit') }}" defer></script>
+  <script src="{{ url_for('static', filename='dashboard.js', v='20260901-fit') }}" defer></script>
   {% block scripts %}{% endblock %}
 </body>
 </html>
