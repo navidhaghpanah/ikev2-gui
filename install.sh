@@ -105,6 +105,8 @@ need=(
   "$SCRIPT_DIR/panel/static/style.css"
   "$SCRIPT_DIR/panel/static/dashboard.js"
   "$SCRIPT_DIR/panel/ikev2-l2tp-gui.service"
+  "$SCRIPT_DIR/panel/panel-telegram-bot.service"
+  "$SCRIPT_DIR/panel/telegram_bot.py"
   "$SCRIPT_DIR/panel/ppp-ip-up"
   "$SCRIPT_DIR/panel/ppp-ip-down"
   "$SCRIPT_DIR/clients/windows/Install-IKEv2.ps1"
@@ -450,6 +452,8 @@ server {
     server_name ${DOMAIN};
     ssl_certificate /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
+    server_tokens off;
+    client_max_body_size 8m;
     add_header X-Frame-Options DENY;
     add_header X-Content-Type-Options nosniff;
     add_header Referrer-Policy same-origin;
@@ -632,6 +636,12 @@ if command -v ufw >/dev/null 2>&1 && ufw status 2>/dev/null | grep -q "Status: a
 fi
 
 if [[ "${EXTRA_ONLY:-}" == "1" ]]; then
+  if [[ -f "$APP_DIR/panel-telegram-bot.service" ]]; then
+    cp "$APP_DIR/panel-telegram-bot.service" /etc/systemd/system/panel-telegram-bot.service
+    rm -f "$APP_DIR/panel-telegram-bot.service"
+  elif [[ -f "$SCRIPT_DIR/panel/panel-telegram-bot.service" ]]; then
+    cp "$SCRIPT_DIR/panel/panel-telegram-bot.service" /etc/systemd/system/panel-telegram-bot.service
+  fi
   systemctl daemon-reload
   if [[ -f /etc/systemd/system/panel-mtg.service ]]; then
     systemctl enable panel-mtg >/dev/null || true
@@ -647,6 +657,10 @@ if [[ "${EXTRA_ONLY:-}" == "1" ]]; then
 fi
 
 cp "$APP_DIR/ikev2-l2tp-gui.service" /etc/systemd/system/ikev2-l2tp-gui.service
+if [[ -f "$APP_DIR/panel-telegram-bot.service" ]]; then
+  cp "$APP_DIR/panel-telegram-bot.service" /etc/systemd/system/panel-telegram-bot.service
+fi
+rm -f "$APP_DIR/ikev2-l2tp-gui.service" "$APP_DIR/panel-telegram-bot.service"
 systemctl daemon-reload
 systemctl enable xl2tpd strongswan-starter ikev2-l2tp-gui nginx >/dev/null
 if [[ -f /etc/systemd/system/panel-mtg.service ]]; then

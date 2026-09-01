@@ -160,7 +160,7 @@ cmd_status() {
   echo "REPO_DIR=$REPO_DIR"
   echo
   hdr "service status"
-  for u in "$PANEL_UNIT" nginx strongswan-starter xl2tpd panel-shadowsocks panel-hysteria panel-mtg; do
+  for u in "$PANEL_UNIT" nginx strongswan-starter xl2tpd panel-shadowsocks panel-hysteria panel-mtg panel-telegram-bot; do
     if systemctl list-unit-files "$u.service" >/dev/null 2>&1; then
       st="$(systemctl is-active "$u" 2>/dev/null || echo n/a)"
       if [[ "$st" == "active" ]]; then

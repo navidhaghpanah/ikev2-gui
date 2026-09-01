@@ -6,6 +6,7 @@ identical to the web panel (same validation, same config writers). Admin-only:
 every update is checked against config.json's telegram_admin_ids before any
 command runs.
 """
+import html
 import json
 import os
 import re
@@ -21,6 +22,19 @@ API_BASE = ""
 # Per-chat in-progress "add user" flow. Lost on restart — acceptable for an
 # admin operational tool; the admin just restarts the flow with /add.
 FLOWS = {}
+TOGGLE_FIELDS = {
+    "ss",
+    "hy",
+    "vless",
+    "vmess",
+    "http",
+    "mtg",
+    "ikev2",
+    "l2tp",
+    "enabled",
+}
+SMART_OS = {"android", "ios", "windows", "mac", "linux", "telegram"}
+SMART_UDP = {"ok", "blocked", "unknown"}
 
 
 def api_call(method, **params):
@@ -54,9 +68,23 @@ def answer_callback(callback_id, text=""):
         pass
 
 
+def hx(value):
+    return html.escape(str(value or ""), quote=True)
+
+
 def is_admin(user_id):
+    try:
+        uid = int(user_id)
+    except (TypeError, ValueError):
+        return False
     ids = panel.load_config().get("telegram_admin_ids") or []
-    return int(user_id) in {int(i) for i in ids}
+    allowed = set()
+    for i in ids:
+        try:
+            allowed.add(int(i))
+        except (TypeError, ValueError):
+            continue
+    return uid in allowed
 
 
 def kb(rows):
@@ -138,9 +166,9 @@ def fmt_user_detail(name, u):
         return bool(u.get(key))
 
     lines = [
-        "👤 <b>%s</b>" % name,
-        "وضعیت: %s" % status,
-        "انقضا: %s" % (u.get("expires") or "نامحدود"),
+        "👤 <b>%s</b>" % hx(name),
+        "وضعیت: %s" % hx(status),
+        "انقضا: %s" % hx(u.get("expires") or "نامحدود"),
         "مصرف: %s از %s" % (panel.human(used), quota_h),
         "IKEv2: %s" % ("فعال" if on("ikev2_enabled") else "غیرفعال"),
         "L2TP: %s" % ("فعال" if on("l2tp_enabled") else "غیرفعال"),
@@ -247,25 +275,25 @@ def handle_smart_pick(chat_id, message_id, name, os_, udp):
         result["ranked"] = ai_ranked
     ranked = result.get("ranked") or []
     if not ranked:
-        text = "برای %s با OS=%s UDP=%s پروتکل مناسبی نماند." % (name, os_, udp)
+        text = "برای %s با OS=%s UDP=%s پروتکل مناسبی نماند." % (hx(name), hx(os_), hx(udp))
         send(chat_id, text, main_menu(), message_id)
         return
     top = ranked[0]
     lines = [
-        "⚡ <b>اتصال هوشمند</b> — %s" % name,
-        "شرایط: OS=%s  UDP=%s  فیلترینگ=ایران  (موجودی سرور، نه پروب ISP)" % (os_, udp),
+        "⚡ <b>اتصال هوشمند</b> — %s" % hx(name),
+        "شرایط: OS=%s  UDP=%s  فیلترینگ=ایران  (موجودی سرور، نه پروب ISP)" % (hx(os_), hx(udp)),
         "",
-        "پیشنهاد: <b>%s</b> (امتیاز %s)" % (top["label"], top["score"]),
-        top.get("reason") or "",
+        "پیشنهاد: <b>%s</b> (امتیاز %s)" % (hx(top.get("label")), hx(top.get("score"))),
+        hx(top.get("reason") or ""),
     ]
     if _st == "ok":
         lines.append("بازبینی مدل: انجام شد.")
     elif _st == "fail":
         lines.append("بازبینی مدل ناموفق؛ رتبهٔ قاعده‌ای.")
     if top.get("uri"):
-        lines.append("URI:\n<code>%s</code>" % top["uri"])
+        lines.append("URI:\n<code>%s</code>" % hx(top["uri"]))
     elif top.get("endpoint"):
-        lines.append("میزبان / کاربر: <code>%s</code>" % top["endpoint"])
+        lines.append("میزبان / کاربر: <code>%s</code>" % hx(top["endpoint"]))
     send(chat_id, "\n".join(lines), main_menu(), message_id)
 
 
@@ -298,6 +326,9 @@ def handle_toggle(chat_id, message_id, name, field):
     u = users.get(name)
     if not u:
         send(chat_id, "کاربر پیدا نشد.", main_menu(), message_id)
+        return
+    if field not in TOGGLE_FIELDS:
+        send(chat_id, "فیلد نامعتبر.", main_menu(), message_id)
         return
     if field == "ss":
         u["ss_enabled"] = not u.get("ss_enabled")
@@ -337,13 +368,13 @@ def handle_reset(chat_id, message_id, name):
         return
     u["used_bytes"] = 0
     apply_user_change(name, users)
-    send(chat_id, "مصرف %s صفر شد.\n\n" % name + fmt_user_detail(name, u), user_detail_kb(name, u), message_id)
+    send(chat_id, "مصرف %s صفر شد.\n\n" % hx(name) + fmt_user_detail(name, u), user_detail_kb(name, u), message_id)
 
 
 def handle_delete_ask(chat_id, message_id, name):
     send(
         chat_id,
-        "❗ حذف کاربر <b>%s</b> برگشت‌ناپذیر است. مطمئنید؟" % name,
+        "❗ حذف کاربر <b>%s</b> برگشت‌ناپذیر است. مطمئنید؟" % hx(name),
         kb(
             [
                 [{"text": "بله، حذف شود", "callback_data": "del:%s:confirm" % name}],
@@ -365,7 +396,7 @@ def handle_delete_confirm(chat_id, message_id, name):
             panel.write_hysteria_config(users)
             panel.write_mtg_config(users)
     text, markup = users_page(0)
-    send(chat_id, "کاربر %s حذف شد.\n\n%s" % (name, text), markup, message_id)
+    send(chat_id, "کاربر %s حذف شد.\n\n%s" % (hx(name), text), markup, message_id)
 
 
 def start_add_flow(chat_id, message_id):
@@ -511,7 +542,7 @@ def finish_add_flow(chat_id, message_id):
     send(
         chat_id,
         "✅ کاربر ساخته شد.\n\nنام: <code>%s</code>\nرمز: <code>%s</code>\n\n%s"
-        % (name, data["password"], fmt_user_detail(name, users[name])),
+        % (hx(name), hx(data["password"]), fmt_user_detail(name, users[name])),
         user_detail_kb(name, users[name]),
         message_id,
     )
@@ -558,24 +589,45 @@ def process_callback(cq):
                 send(chat_id, "کاربر را برای اتصال هوشمند انتخاب کنید:", markup, message_id)
         elif data.startswith("smartu:"):
             name = data.split(":", 1)[1]
-            send(chat_id, "سیستم‌عامل / کلاینت %s؟" % name, smart_os_kb(name), message_id)
+            if not panel.USER_RE.match(name):
+                return
+            send(chat_id, "سیستم‌عامل / کلاینت %s؟" % hx(name), smart_os_kb(name), message_id)
         elif data.startswith("smarto:"):
             _, name, os_ = data.split(":", 2)
-            send(chat_id, "وضعیت UDP برای %s؟" % name, smart_udp_kb(name, os_), message_id)
+            if not panel.USER_RE.match(name) or os_ not in SMART_OS:
+                return
+            send(chat_id, "وضعیت UDP برای %s؟" % hx(name), smart_udp_kb(name, os_), message_id)
         elif data.startswith("smartq:"):
             _, name, os_, udp = data.split(":", 3)
+            if not panel.USER_RE.match(name) or os_ not in SMART_OS or udp not in SMART_UDP:
+                return
             handle_smart_pick(chat_id, message_id, name, os_, udp)
         elif data.startswith("users:"):
-            handle_users(chat_id, message_id, int(data.split(":", 1)[1]))
+            try:
+                page = int(data.split(":", 1)[1])
+            except ValueError:
+                page = 0
+            page = max(0, min(page, 10000))
+            handle_users(chat_id, message_id, page)
         elif data.startswith("user:"):
-            handle_user_detail(chat_id, message_id, data.split(":", 1)[1])
+            name = data.split(":", 1)[1]
+            if not panel.USER_RE.match(name):
+                return
+            handle_user_detail(chat_id, message_id, name)
         elif data.startswith("toggle:"):
             _, name, field = data.split(":", 2)
+            if not panel.USER_RE.match(name) or field not in TOGGLE_FIELDS:
+                return
             handle_toggle(chat_id, message_id, name, field)
         elif data.startswith("reset:"):
-            handle_reset(chat_id, message_id, data.split(":", 1)[1])
+            name = data.split(":", 1)[1]
+            if not panel.USER_RE.match(name):
+                return
+            handle_reset(chat_id, message_id, name)
         elif data.startswith("del:"):
             _, name, action = data.split(":", 2)
+            if not panel.USER_RE.match(name):
+                return
             if action == "ask":
                 handle_delete_ask(chat_id, message_id, name)
             elif action == "confirm":
@@ -583,11 +635,13 @@ def process_callback(cq):
         elif data == "add:start":
             start_add_flow(chat_id, message_id)
         elif data.startswith("addtoggle:"):
-            handle_addtoggle(chat_id, message_id, data.split(":", 1)[1])
+            key = data.split(":", 1)[1]
+            if key in PROTO_LABELS:
+                handle_addtoggle(chat_id, message_id, key)
         elif data == "addconfirm":
             finish_add_flow(chat_id, message_id)
-    except Exception as e:
-        send(chat_id, "خطا: %s" % e, main_menu())
+    except Exception:
+        send(chat_id, "خطا در انجام عملیات.", main_menu())
 
 
 def process_update(update):
@@ -616,8 +670,8 @@ def main():
             offset = update["update_id"] + 1
             try:
                 process_update(update)
-            except Exception as e:
-                print("update error:", e)
+            except Exception:
+                time.sleep(1)
 
 
 if __name__ == "__main__":

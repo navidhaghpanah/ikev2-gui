@@ -33,6 +33,8 @@ TCP در برابر UDP. پنل و Let’s Encrypt روی `80/443`. اگر `ufw`
 
 آپدیت: `sudo multivpn update` (کپی پنل، `EXTRA_ONLY=1` برای mtg+ufw، ری‌استارت GUI نه IKEv2).
 
+Gateway مدل: فقط HTTPS عمومی؛ localhost، لینک‌لوکال و نشانی‌های خصوصی ذخیره/فراخوانی نمی‌شوند.
+
 ![تنظیمات](visual/settings.png)
 
 ## راهنمای کلاینت

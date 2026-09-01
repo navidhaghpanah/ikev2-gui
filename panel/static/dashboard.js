@@ -54,13 +54,17 @@ async function refreshDashboard() {
     renderOnline(document.getElementById('online-list'), data.online);
     if (liveBadge) {
       liveBadge.classList.remove('stale');
-      liveBadge.innerHTML = '<i></i> ' + (document.body.getAttribute('data-live') || 'online');
+      liveBadge.replaceChildren();
+      const mark = document.createElement('i');
+      liveBadge.append(mark, document.createTextNode(' ' + (document.body.getAttribute('data-live') || 'online')));
       liveBadge.title = '';
     }
   } catch (_) {
     if (liveBadge) {
       liveBadge.classList.add('stale');
-      liveBadge.innerHTML = '<i></i> ' + (document.body.getAttribute('data-stale') || 'stale');
+      liveBadge.replaceChildren();
+      const mark = document.createElement('i');
+      liveBadge.append(mark, document.createTextNode(' ' + (document.body.getAttribute('data-stale') || 'stale')));
       liveBadge.title = '';
     }
   }

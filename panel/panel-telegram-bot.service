@@ -1,0 +1,28 @@
+[Unit]
+Description=NH MultiVPN Telegram admin bot
+After=network-online.target ikev2-l2tp-gui.service
+ConditionPathExists=/opt/ikev2-l2tp-gui/telegram_bot.py
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/ikev2-l2tp-gui
+Environment=IKEGUI_APP=/opt/ikev2-l2tp-gui
+Environment=IKEGUI_CFG=/etc/ikev2-l2tp-gui
+Environment=IKEGUI_DATA=/var/lib/ikev2-l2tp-gui
+Environment=HOME=/var/lib/ikev2-l2tp-gui
+ExecStart=/usr/bin/python3 /opt/ikev2-l2tp-gui/telegram_bot.py
+Restart=on-failure
+RestartSec=8
+User=root
+UMask=0077
+PrivateTmp=true
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

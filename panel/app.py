@@ -9,6 +9,7 @@ import math
 import os
 import re
 import shutil
+import socket
 import subprocess
 import threading
 import time
@@ -431,7 +432,7 @@ I18N = {
         "ai_api_key_clear": "حذف کلید ذخیره‌شده",
         "save_ai": "ذخیرهٔ تنظیمات مدل",
         "ai_ok": "تنظیمات مدل ذخیره شد.",
-        "ai_base_bad": "Gateway URL نامعتبر است؛ باید HTTPS بدون اطلاعات ورود در آدرس باشد.",
+        "ai_base_bad": "Gateway URL نامعتبر است؛ فقط HTTPS عمومی، بدون اطلاعات ورود، localhost یا نشانی خصوصی.",
     },
     "en": {
         "brand_sub": "Private network admin",
@@ -789,7 +790,7 @@ I18N = {
         "ai_api_key_clear": "Remove stored key",
         "save_ai": "Save model settings",
         "ai_ok": "Model settings saved.",
-        "ai_base_bad": "Invalid Gateway URL; use HTTPS with no credentials in the URL.",
+        "ai_base_bad": "Invalid Gateway URL; use public HTTPS with no credentials, localhost, or private addresses.",
     },
 }
 
@@ -799,6 +800,7 @@ LOG_UNITS = (
     "panel-shadowsocks",
     "panel-hysteria",
     "panel-mtg",
+    "panel-telegram-bot",
     "nginx",
 )
 
@@ -1065,8 +1067,14 @@ def save_config(cfg):
 
 def load_admin():
     data = load_json(ADMIN_FILE, {})
-    if data.get("secret"):
-        app.secret_key = data["secret"]
+    if not data.get("secret"):
+        data["secret"] = secrets.token_hex(32)
+        try:
+            if ADMIN_FILE.parent.is_dir():
+                save_admin(data)
+        except OSError:
+            pass
+    app.secret_key = data["secret"]
     # Installation requires TLS. Never downgrade session cookies to HTTP.
     app.config["SESSION_COOKIE_SECURE"] = True
     return data
@@ -1116,6 +1124,19 @@ def csrf_context():
     }
 
 
+def _same_host_redirect(fallback):
+    dest = fallback
+    ref = request.referrer
+    if ref:
+        try:
+            parsed = urllib.parse.urlparse(ref)
+            if parsed.scheme in ("http", "https") and parsed.netloc == request.host:
+                dest = ref
+        except ValueError:
+            pass
+    return redirect(dest)
+
+
 def csrf_required(fn):
     @wraps(fn)
     def wrap(*args, **kwargs):
@@ -1123,7 +1144,8 @@ def csrf_required(fn):
         expected = session.get("csrf", "")
         if not expected or not secrets.compare_digest(submitted, expected):
             flash_t("csrf_bad")
-            return redirect(request.referrer or url_for("index"))
+            fallback = url_for("index") if session.get("ok") else url_for("login")
+            return _same_host_redirect(fallback)
         return fn(*args, **kwargs)
 
     return wrap
@@ -2288,7 +2310,10 @@ def login():
         expected = session.get("csrf", "")
         if not expected or not secrets.compare_digest(submitted, expected):
             return render_template("login.html", err=tr("login_csrf"), host=host), 400
-        remote = request.headers.get("X-Real-IP", request.remote_addr or "")
+        remote = (request.remote_addr or "").strip()
+        forwarded = (request.headers.get("X-Real-IP") or "").strip()
+        if forwarded and remote in ("127.0.0.1", "::1"):
+            remote = forwarded.split(",")[0].strip()[:64]
         now = time.monotonic()
         attempts = [t for t in _login_attempts.get(remote, []) if now - t < LOGIN_WINDOW]
         if len(attempts) >= LOGIN_MAX_ATTEMPTS:
@@ -2297,9 +2322,9 @@ def login():
         user = (request.form.get("user") or "").strip()
         pw = request.form.get("password") or ""
         if user == admin.get("user") and admin.get("password") and check_password_hash(admin["password"], pw):
+            session.clear()
             session["ok"] = True
             session.permanent = True
-            session.pop("csrf", None)
             _login_attempts.pop(remote, None)
             resp = redirect(url_for("index"))
             return set_ui_cookies(resp, current_theme(), current_lang())
@@ -3015,6 +3040,71 @@ def _ai_chat_url(base):
     return base + "/chat/completions"
 
 
+def _ip_blocked(ip):
+    if isinstance(ip, ipaddress.IPv6Address) and ip.ipv4_mapped:
+        ip = ip.ipv4_mapped
+    if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_multicast:
+        return True
+    if ip.is_reserved or ip.is_unspecified:
+        return True
+    if ip.version == 4:
+        n = int(ip)
+        if 0x64400000 <= n <= 0x647FFFFF:  # 100.64.0.0/10 shared address space
+            return True
+    return False
+
+
+def _host_blocked(host):
+    host = (host or "").strip().lower().rstrip(".")
+    if not host:
+        return True
+    if host in ("napi.arvancloud.ir", "napi.arvancloud.com"):
+        return True
+    if host in (
+        "localhost",
+        "localhost.localdomain",
+        "metadata",
+        "metadata.google.internal",
+        "metadata.google.com",
+        "internal",
+    ):
+        return True
+    if host.endswith((".local", ".localhost", ".internal", ".lan", ".home", ".corp", ".localdomain")):
+        return True
+    if host.startswith("metadata."):
+        return True
+    if host.isdigit() or host.startswith("0x"):
+        return True
+    try:
+        ip = ipaddress.ip_address(host)
+        if _ip_blocked(ip):
+            return True
+    except ValueError:
+        pass
+    try:
+        infos = socket.getaddrinfo(host, None, type=socket.SOCK_STREAM)
+    except (socket.gaierror, OSError, ValueError):
+        return True
+    if not infos:
+        return True
+    saw_ip = False
+    for info in infos:
+        addr = info[4][0]
+        try:
+            ip = ipaddress.ip_address(addr)
+        except ValueError:
+            return True
+        saw_ip = True
+        if _ip_blocked(ip):
+            return True
+    return not saw_ip
+
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
 def _ai_base_ok(base):
     base = (base or "").strip()
     if not base:
@@ -3028,7 +3118,12 @@ def _ai_base_ok(base):
     if u.username or u.password:
         return False
     host = (u.hostname or "").lower()
-    if host in ("napi.arvancloud.ir", "napi.arvancloud.com"):
+    if not host:
+        return False
+    port = u.port
+    if port is not None and not (1 <= port <= 65535):
+        return False
+    if _host_blocked(host):
         return False
     return True
 
@@ -3159,6 +3254,9 @@ def smart_ai_review(result, lang):
             ],
         }
     ).encode("utf-8")
+    chat_base = url.rsplit("/chat/completions", 1)[0] if url.endswith("/chat/completions") else url
+    if not _ai_base_ok(chat_base):
+        return None, "fail", None
     req = urllib.request.Request(
         url,
         data=body,
@@ -3169,7 +3267,8 @@ def smart_ai_review(result, lang):
         },
     )
     try:
-        with urllib.request.urlopen(req, timeout=12) as resp:
+        opener = urllib.request.build_opener(_NoRedirect)
+        with opener.open(req, timeout=12) as resp:
             data = json.loads(resp.read().decode("utf-8"))
         text = (
             (((data.get("choices") or [{}])[0]).get("message") or {}).get("content") or ""
@@ -3568,10 +3667,15 @@ def subscription(name, token):
     # Public by design — this is what proxy client apps auto-refresh from,
     # they can't hold a panel login session. The per-user token is the
     # only guard, so it must be checked with a constant-time comparison.
+    if not USER_RE.match(name or ""):
+        return ("", 404)
     users = load_users()
     u = users.get(name)
     expected = (u or {}).get("sub_token") or ""
-    if not u or user_blocked(u) or not expected or not secrets.compare_digest(token, expected):
+    token = token or ""
+    if not u or user_blocked(u) or not expected or len(token) != len(expected):
+        return ("", 404)
+    if not secrets.compare_digest(token, expected):
         return ("", 404)
     cfg = load_config()
     body = "\n".join(sub_uris(name, u, cfg))
@@ -3772,6 +3876,9 @@ def users_add():
 
 
 
+@app.route("/users/update", methods=["POST"])
+@login_required
+@csrf_required
 def users_update():
     name = (request.form.get("name") or "").strip()
     password = (request.form.get("password") or "").strip()
@@ -3842,6 +3949,9 @@ def users_update():
     return redirect(url_for("users_page"))
 
 
+@app.route("/users/delete", methods=["POST"])
+@login_required
+@csrf_required
 def users_delete():
     name = (request.form.get("name") or "").strip()
     if not USER_RE.match(name):
@@ -3920,7 +4030,7 @@ def settings_domain():
     if ssl_ok:
         flash_t("domain_ssl_ok", domain=domain)
     else:
-        extra = (" " + ssl_note) if ssl_note else ""
+        extra = (" " + _public_flash_detail(ssl_note, 120)) if ssl_note else ""
         flash_t("domain_ssl_fail", domain=domain, extra=extra)
     return redirect(url_for("settings"))
 
@@ -4078,10 +4188,10 @@ def settings_telegram():
         cfg["telegram_admin_ids"] = admin_ids
         save_config(cfg)
     if token:
-        run(["systemctl", "restart", "panel-telegram-bot"], timeout=15)
+        run(["systemctl", "enable", "--now", "panel-telegram-bot"], timeout=15)
         flash_t("tg_ok")
     else:
-        run(["systemctl", "stop", "panel-telegram-bot"], timeout=15)
+        run(["systemctl", "disable", "--now", "panel-telegram-bot"], timeout=15)
         flash_t("tg_off")
     return redirect(url_for("settings"))
 
@@ -4102,6 +4212,18 @@ def update_status():
     except ValueError:
         behind = None
     return {"current": cur, "latest": latest, "behind": behind}
+
+
+def _public_flash_detail(text, limit=180):
+    text = re.sub(r"https?://\S+", "[url]", text or "")
+    text = re.sub(
+        r"(?i)(token|key|secret|password|bearer|authorization)\s*[=:]\s*\S+",
+        r"\1=[redacted]",
+        text,
+    )
+    text = re.sub(r"[^\w\s.:,()/%+-]+", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text[-limit:] if text else ""
 
 
 def apply_update():
@@ -4165,8 +4287,9 @@ def settings_theme():
             cfg = load_config()
             cfg["theme"] = theme
             save_config(cfg)
-    dest = request.referrer or (url_for("index") if session.get("ok") else url_for("login"))
-    return set_ui_cookies(redirect(dest), theme=theme)
+    fallback = url_for("index") if session.get("ok") else url_for("login")
+    resp = _same_host_redirect(fallback)
+    return set_ui_cookies(resp, theme=theme)
 
 
 @app.route("/settings/lang", methods=["POST"])
@@ -4180,8 +4303,9 @@ def settings_lang():
             cfg = load_config()
             cfg["lang"] = lang
             save_config(cfg)
-    dest = request.referrer or (url_for("index") if session.get("ok") else url_for("login"))
-    return set_ui_cookies(redirect(dest), lang=lang)
+    fallback = url_for("index") if session.get("ok") else url_for("login")
+    resp = _same_host_redirect(fallback)
+    return set_ui_cookies(resp, lang=lang)
 
 
 @app.route("/settings/restart", methods=["POST"])
@@ -4194,7 +4318,7 @@ def settings_restart():
 
     threading.Thread(target=later, daemon=True).start()
     flash_t("restart_ok")
-    return redirect(request.referrer or url_for("settings"))
+    return _same_host_redirect(url_for("settings"))
 
 
 @app.route("/logs")
@@ -4240,20 +4364,35 @@ def settings_restore():
         flash_t("backup_missing")
         return redirect(url_for("settings"))
     raw = upload.read()
+    if len(raw) > 4 * 1024 * 1024:
+        flash_t("backup_bad")
+        return redirect(url_for("settings"))
     try:
         zf = zipfile.ZipFile(io.BytesIO(raw))
     except zipfile.BadZipFile:
         flash_t("backup_bad")
         return redirect(url_for("settings"))
     names = zf.namelist()
-    if not names or any(not _backup_ok_name(n) for n in names):
+    infos = zf.infolist()
+    if not names or len(names) > 32 or any(not _backup_ok_name(n) for n in names):
         flash_t("backup_bad")
         return redirect(url_for("settings"))
+    total_unc = 0
+    for info in infos:
+        if info.file_size > 2 * 1024 * 1024:
+            flash_t("backup_bad")
+            return redirect(url_for("settings"))
+        total_unc += max(0, int(info.file_size or 0))
+        if total_unc > 4 * 1024 * 1024:
+            flash_t("backup_bad")
+            return redirect(url_for("settings"))
     extracted = {}
     try:
         for n in names:
             base = Path(n.replace("\\", "/")).name
             data = zf.read(n)
+            if len(data) > 2 * 1024 * 1024:
+                raise ValueError("size")
             extracted[base] = data
         if "users.json" in extracted:
             users = json.loads(extracted["users.json"].decode("utf-8"))
@@ -4262,10 +4401,16 @@ def settings_restore():
             for k, v in users.items():
                 if not USER_RE.match(str(k)) or not isinstance(v, dict):
                     raise ValueError("user")
+                pw = v.get("password") or ""
+                if pw and not vpn_password_ok(str(pw)):
+                    raise ValueError("password")
         if "config.json" in extracted:
             cfg = json.loads(extracted["config.json"].decode("utf-8"))
             if not isinstance(cfg, dict):
                 raise ValueError("config")
+            if cfg.get("ai_base") and not _ai_base_ok(str(cfg.get("ai_base") or "")):
+                cfg["ai_base"] = ""
+                extracted["config.json"] = (json.dumps(cfg, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
     except (UnicodeDecodeError, json.JSONDecodeError, ValueError, KeyError):
         flash_t("backup_bad")
         return redirect(url_for("settings"))
@@ -4300,7 +4445,7 @@ def settings_update_apply():
     if ok:
         flash_t("upd_ok")
     else:
-        flash_t("upd_fail", out=out[-400:])
+        flash_t("upd_fail", out=_public_flash_detail(out))
     return redirect(url_for("settings"))
 
 
