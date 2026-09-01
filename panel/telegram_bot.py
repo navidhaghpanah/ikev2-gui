@@ -242,6 +242,9 @@ def handle_smart_pick(chat_id, message_id, name, os_, udp):
         return
     form = {"os": os_, "net": "unknown", "udp": udp, "path": "unknown", "native": False}
     result = panel.rank_smart_connect(name, u, panel.load_config(), form, "fa")
+    _text, _st, ai_ranked = panel.smart_ai_review(result, "fa")
+    if ai_ranked:
+        result["ranked"] = ai_ranked
     ranked = result.get("ranked") or []
     if not ranked:
         text = "برای %s با OS=%s UDP=%s پروتکل مناسبی نماند." % (name, os_, udp)
@@ -255,6 +258,10 @@ def handle_smart_pick(chat_id, message_id, name, os_, udp):
         "پیشنهاد: <b>%s</b> (امتیاز %s)" % (top["label"], top["score"]),
         top.get("reason") or "",
     ]
+    if _st == "ok":
+        lines.append("بازبینی مدل: انجام شد.")
+    elif _st == "fail":
+        lines.append("بازبینی مدل ناموفق؛ رتبهٔ قاعده‌ای.")
     if top.get("uri"):
         lines.append("URI:\n<code>%s</code>" % top["uri"])
     elif top.get("endpoint"):
