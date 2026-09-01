@@ -5,6 +5,22 @@ const faDigits = value => String(value).replace(/\d/g, digit => '۰۱۲۳۴۵۶�
 const fmt = value => (LANG === 'fa' ? faDigits(value) : String(value));
 const pct = value => (LANG === 'fa' ? `${fmt(value)}٪` : `${fmt(value)}%`);
 
+function setGauge(id, valuePct) {
+  const el = document.querySelector('[data-gauge="' + id + '"]');
+  if (!el) return;
+  const pctv = Math.max(0, Math.min(100, Number(valuePct) || 0));
+  el.setAttribute('data-pct', String(pctv));
+  const hand = el.querySelector('.g-hand');
+  if (hand) hand.setAttribute('transform', 'rotate(' + (-135 + 2.7 * pctv) + ' 32 32)');
+}
+
+function mbpsNeedle(mbps, maxMbps) {
+  const n = Number(mbps);
+  if (!isFinite(n) || n <= 0) return 0;
+  return Math.min(100, (n / (maxMbps || 1000)) * 100);
+}
+
+
 function setText(id, value) {
   const el = document.getElementById(id);
   if (el) el.textContent = value;
@@ -40,6 +56,12 @@ async function refreshDashboard() {
     setText('stat-sessions', fmt(data.sessions.length));
     setText('stat-cpu', pct(data.cpu));
     setText('stat-ram', pct(data.mem_pct));
+    setGauge('cpu', data.cpu);
+    setGauge('ram', data.mem_pct);
+    if (data.disk_pct != null) {
+      setText('stat-disk', pct(data.disk_pct));
+      setGauge('disk', data.disk_pct);
+    }
     setText('top-cpu', pct(data.cpu));
     setText('top-ram', pct(data.mem_pct));
     const barCpu = document.getElementById('bar-cpu');
@@ -82,20 +104,25 @@ function csrfFrom(form) {
 
 function fillSpeedLine(data) {
   const line = document.getElementById('speed-line');
-  if (!line) return;
-  const fail = line.getAttribute('data-fail') || 'failed';
-  const mbps = line.getAttribute('data-mbps') || 'Mbps';
-  const startL = line.getAttribute('data-start') || 'start';
-  const endL = line.getAttribute('data-end') || 'end';
+  const downEl = document.querySelector('[data-gauge="speed-down"]');
+  const maxMbps = downEl ? Number(downEl.getAttribute('data-max') || 1000) : 1000;
   if (!data || !data.ok) {
-    line.textContent = fail;
+    if (line) line.textContent = (line && line.getAttribute('data-fail')) || 'failed';
     return;
   }
   const down = data.down_mbps == null ? '—' : data.down_mbps;
   const up = data.up_mbps == null ? '—' : data.up_mbps;
-  const started = data.started || data.at || '—';
-  const ended = data.ended || data.at || '—';
-  line.textContent = '↓ ' + down + ' · ↑ ' + up + ' · ' + startL + ' ' + started + ' → ' + endL + ' ' + ended;
+  setText('stat-speed-down', down === '—' ? '—' : fmt(down));
+  setText('stat-speed-up', up === '—' ? '—' : fmt(up));
+  setGauge('speed-down', mbpsNeedle(data.down_mbps, maxMbps));
+  setGauge('speed-up', mbpsNeedle(data.up_mbps, maxMbps));
+  if (line) {
+    const startL = line.getAttribute('data-start') || 'start';
+    const endL = line.getAttribute('data-end') || 'end';
+    const started = data.started || data.at || '—';
+    const ended = data.ended || data.at || '—';
+    line.textContent = startL + ' ' + started + ' → ' + endL + ' ' + ended;
+  }
 }
 
 const speedForm = document.getElementById('speed-form');
