@@ -72,3 +72,64 @@ async function refreshDashboard() {
 
 refreshDashboard();
 window.setInterval(refreshDashboard, 5000);
+
+
+function csrfFrom(form) {
+  const input = form && form.querySelector('input[name="csrf_token"]');
+  return input ? input.value : '';
+}
+
+function fillSpeed(ping, down, up, at) {
+  const box = document.getElementById('speed-stats');
+  const mbps = (box && box.getAttribute('data-mbps')) || 'Mbps';
+  const ms = (box && box.getAttribute('data-ms')) || 'ms';
+  const idle = (box && box.getAttribute('data-idle')) || '—';
+  setText('speed-ping', ping == null ? idle : `${ping} ${ms}`);
+  setText('speed-down', down == null ? idle : `${down} ${mbps}`);
+  setText('speed-up', up == null ? idle : `${up} ${mbps}`);
+  setText('speed-at', at || '');
+}
+
+const speedForm = document.getElementById('speed-form');
+if (speedForm) {
+  speedForm.addEventListener('submit', async event => {
+    event.preventDefault();
+    const panel = speedForm.closest('.speed-panel');
+    const btn = document.getElementById('speed-run');
+    const box = document.getElementById('speed-stats');
+    const running = (box && box.getAttribute('data-running')) || 'Testing…';
+    const fail = (box && box.getAttribute('data-fail')) || 'failed';
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = running;
+    }
+    if (panel) panel.classList.add('is-running');
+    try {
+      const body = new URLSearchParams();
+      body.set('csrf_token', csrfFrom(speedForm));
+      const response = await fetch('/api/speedtest', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'X-CSRFToken': csrfFrom(speedForm),
+        },
+        body,
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.ok) {
+        fillSpeed(null, null, null, fail);
+        return;
+      }
+      fillSpeed(data.ping_ms, data.down_mbps, data.up_mbps, data.at || '');
+    } catch (_) {
+      fillSpeed(null, null, null, fail);
+    } finally {
+      if (panel) panel.classList.remove('is-running');
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = speedForm.getAttribute('data-run') || btn.textContent;
+      }
+    }
+  });
+}
