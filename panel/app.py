@@ -841,6 +841,27 @@ def current_theme():
     return theme if theme in ("dark", "light") else "dark"
 
 
+class I18NView:
+    """Jinja t.update must not resolve to dict.update()."""
+
+    __slots__ = ("_t",)
+
+    def __init__(self, table):
+        object.__setattr__(self, "_t", table or {})
+
+    def __getattr__(self, key):
+        table = object.__getattribute__(self, "_t")
+        if key in table:
+            return table[key]
+        fa = I18N.get("fa") or {}
+        if key in fa:
+            return fa[key]
+        return key
+
+    def __getitem__(self, key):
+        return self.__getattr__(key)
+
+
 def tr(key, **kwargs):
     lang = current_lang()
     table = I18N.get(lang) or I18N["fa"]
@@ -1084,7 +1105,7 @@ def csrf_context():
         "csrf_token": csrf_token,
         "lang": lang,
         "theme": current_theme(),
-        "t": I18N.get(lang) or I18N["fa"],
+        "t": I18NView(I18N.get(lang) or I18N["fa"]),
         "content_dir": "rtl" if lang == "fa" else "ltr",
     }
 
@@ -4041,7 +4062,13 @@ def apply_update():
     if not deploy_script.is_file():
         return False, "scripts/deploy.sh در %s پیدا نشد" % REPO_DIR
     out = run(["bash", str(deploy_script), REPO_BRANCH], timeout=120)
-    return "panel restarted OK" in out, out
+    ok = "panel restarted OK" in out
+    if not ok and "run as root" not in out and "panel failed to start" not in out:
+        # Restarting this unit from inside the request often drops the OK line;
+        # git already moved HEAD to origin/main.
+        if "HEAD is now at" in out or "up to date" in out.lower():
+            ok = True
+    return ok, out
 
 
 
