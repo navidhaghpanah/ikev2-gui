@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 {% macro analog(gid, label, pct, text) -%}
-<figure class="ms-gauge" data-gauge="{{ gid }}" data-pct="{{ pct }}"{% if gid.startswith('speed-') %} data-max="1000"{% endif %}>
+<figure class="ms-gauge" data-gauge="{{ gid }}" data-pct="{{ pct }}" title="{{ label }}"{% if gid.startswith('speed-') %} data-max="1000"{% endif %}>
   <svg viewBox="0 0 64 64" aria-hidden="true">
     <circle class="g-face" cx="32" cy="32" r="30"/>
     {% for i in range(12) %}
@@ -18,10 +18,12 @@
   {{ analog('cpu', t.cpu, stats.cpu, cpu_fa ~ '٪') }}
   {{ analog('ram', t.ram, stats.mem_pct, mem_fa ~ '٪') }}
   {{ analog('disk', t.disk, stats.disk_pct, disk_fa ~ '٪') }}
-  <span class="ms-item"><small>↓</small><b id="net-down-speed">{{ net_down_h }}</b></span>
-  <span class="ms-item"><small>↑</small><b id="net-up-speed">{{ net_up_h }}</b></span>
-  <span class="ms-item"><small>Σ↓</small><b id="net-rx-total">{{ net_rx_h }}</b></span>
-  <span class="ms-item"><small>Σ↑</small><b id="net-tx-total">{{ net_tx_h }}</b></span>
+  <span class="ms-net" title="live / total">
+    <span class="ms-item"><small>↓</small><b id="net-down-speed">{{ net_down_h }}</b></span>
+    <span class="ms-item"><small>↑</small><b id="net-up-speed">{{ net_up_h }}</b></span>
+    <span class="ms-item"><small>Σ↓</small><b id="net-rx-total">{{ net_rx_h }}</b></span>
+    <span class="ms-item"><small>Σ↑</small><b id="net-tx-total">{{ net_tx_h }}</b></span>
+  </span>
   <form id="speed-form" class="ms-speed" data-run="{{ t.speed_test }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     {% set spd = speed_last or {} %}
@@ -34,10 +36,10 @@
   </form>
 </section>
 <section class="dashboard-grid">
-  <article class="panel span-2"><header class="panel-header"><div><h2>{{ t.recent_sessions }}</h2><p>{{ t.recent_sessions_p }}</p></div><a class="text-link" href="{{ url_for('sessions_page') }}">{{ t.view_all }}</a></header><div class="table-wrap flush"><table><thead><tr><th>{{ t.col_user }}</th><th>{{ t.col_proto }}</th><th>{{ t.col_vip }}</th><th>{{ t.col_remote }}</th><th>{{ t.col_uptime }}</th><th>{{ t.col_traffic }}</th></tr></thead><tbody>
-    {% for s in sessions[:6] %}<tr><td><div class="user-cell"><span class="mini-avatar">{{ (s.user or '?')[:1]|upper }}</span><strong>{{ s.user or t.unknown }}</strong></div></td><td><span class="protocol {{ 'ike' if s.proto == 'IKEv2' else 'l2' }}">{{ s.proto }}</span></td><td><code>{{ s.vip or '—' }}</code></td><td><code>{{ s.remote or '—' }}</code></td><td>{{ s.uptime or '—' }}</td><td class="traffic">↓ {{ s.out_h }}<br><small>↑ {{ s.in_h }}</small></td></tr>{% else %}<tr><td colspan="6"><div class="empty-state">{{ t.no_sessions }}</div></td></tr>{% endfor %}
+  <article class="panel span-2"><header class="panel-header"><div><h2>{{ t.recent_sessions }}</h2></div><a class="text-link" href="{{ url_for('sessions_page') }}">{{ t.view_all }}</a></header><div class="table-wrap flush"><table><thead><tr><th>{{ t.col_user }}</th><th>{{ t.col_proto }}</th><th>{{ t.col_vip }}</th><th>{{ t.col_remote }}</th><th>{{ t.col_uptime }}</th><th>{{ t.col_traffic }}</th></tr></thead><tbody>
+    {% for s in sessions[:4] %}<tr><td><div class="user-cell"><span class="mini-avatar">{{ (s.user or '?')[:1]|upper }}</span><strong>{{ s.user or t.unknown }}</strong></div></td><td><span class="protocol {{ 'ike' if s.proto == 'IKEv2' else 'l2' }}">{{ s.proto }}</span></td><td><code>{{ s.vip or '—' }}</code></td><td><code>{{ s.remote or '—' }}</code></td><td>{{ s.uptime or '—' }}</td><td class="traffic">↓ {{ s.out_h }}<br><small>↑ {{ s.in_h }}</small></td></tr>{% else %}<tr><td colspan="6"><div class="empty-state">{{ t.no_sessions }}</div></td></tr>{% endfor %}
   </tbody></table></div></article>
-  <article class="panel"><header class="panel-header"><div><h2>{{ t.online_now }}</h2><p>{{ t.online_now_p }}</p></div></header><div id="online-list" class="online-list">{% for name in online %}<span class="online-user"><i></i>{{ name }}</span>{% else %}<div class="empty-state compact">{{ t.nobody_online }}</div>{% endfor %}</div></article>
-  <article class="panel span-3"><header class="panel-header"><div><h2>{{ t.quick }}</h2><p>{{ t.quick_p }}</p></div></header><div class="quick-actions"><a href="{{ url_for('users_page') }}#add-user"><span class="quick-icon blue">+</span><span><b>{{ t.quick_add }}</b><small>{{ t.quick_add_p }}</small></span></a><a href="{{ url_for('sessions_page') }}"><span class="quick-icon green">↔</span><span><b>{{ t.quick_sess }}</b><small>{{ t.quick_sess_p }}</small></span></a><a href="{{ url_for('clients_page') }}"><span class="quick-icon violet">↓</span><span><b>{{ t.quick_cli }}</b><small>{{ t.quick_cli_p }}</small></span></a><a href="{{ url_for('settings') }}"><span class="quick-icon amber">⚙</span><span><b>{{ t.quick_set }}</b><small>{{ t.quick_set_p }}</small></span></a></div></article>
+  <article class="panel"><header class="panel-header"><div><h2>{{ t.online_now }}</h2></div></header><div id="online-list" class="online-list">{% for name in online %}<span class="online-user"><i></i>{{ name }}</span>{% else %}<div class="empty-state compact">{{ t.nobody_online }}</div>{% endfor %}</div></article>
+  <article class="panel span-3"><header class="panel-header"><div><h2>{{ t.quick }}</h2></div></header><div class="quick-actions"><a href="{{ url_for('users_page') }}#add-user"><span class="quick-icon blue">+</span><span><b>{{ t.quick_add }}</b></span></a><a href="{{ url_for('sessions_page') }}"><span class="quick-icon green">↔</span><span><b>{{ t.quick_sess }}</b></span></a><a href="{{ url_for('clients_page') }}"><span class="quick-icon violet">↓</span><span><b>{{ t.quick_cli }}</b></span></a><a href="{{ url_for('settings') }}"><span class="quick-icon amber">⚙</span><span><b>{{ t.quick_set }}</b></span></a></div></article>
 </section>
 {% endblock %}
