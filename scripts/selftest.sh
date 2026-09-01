@@ -41,6 +41,7 @@ panel/ppp-ip-down
 panel/ikev2-l2tp-gui.service
 panel/panel-telegram-bot.service
 panel/templates/smart.html
+scripts/smoke_panel.py
 clients/windows/Install-IKEv2.ps1
 clients/windows/Install-IKEv2.bat
 clients/windows/Check-Windows.bat
@@ -191,6 +192,17 @@ print("  OK  client stamp")
 PY
 else
   echo "  skip python3 not installed"
+fi
+
+echo "== flask e2e smoke"
+if command -v python3 >/dev/null && python3 -c "import flask,werkzeug" 2>/dev/null; then
+  if python3 "$ROOT/scripts/smoke_panel.py"; then
+    ok "flask e2e smoke"
+  else
+    bad "flask e2e smoke"
+  fi
+else
+  echo "  skip flask/werkzeug not installed"
 fi
 
 rm -rf "$TMP"

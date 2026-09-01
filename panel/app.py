@@ -858,6 +858,10 @@ class I18NView:
         object.__setattr__(self, "_t", table or {})
 
     def __getattr__(self, key):
+        # Dunders like __html__ must AttributeError; otherwise MarkupSafe
+        # thinks this object is HTML-safe and every template can 500.
+        if key.startswith("_"):
+            raise AttributeError(key)
         table = object.__getattribute__(self, "_t")
         if key in table:
             return table[key]
@@ -966,9 +970,14 @@ def run(cmd, timeout=10):
 
 def load_json(path, default):
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
+        data = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         return default
+    if default is None:
+        return data
+    if not isinstance(data, type(default)):
+        return default
+    return data
 
 
 def save_json(path, data):
@@ -976,7 +985,10 @@ def save_json(path, data):
     tmp = path.with_suffix(".tmp")
     tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     tmp.replace(path)
-    os.chmod(path, 0o600)
+    try:
+        os.chmod(path, 0o600)
+    except OSError:
+        pass
 
 
 def load_config():
@@ -1085,7 +1097,17 @@ def save_admin(data):
 
 
 def load_users():
-    return load_json(USERS_FILE, {})
+    data = load_json(USERS_FILE, {})
+    if not isinstance(data, dict):
+        return {}
+    out = {}
+    for name, u in data.items():
+        if isinstance(name, str) and USER_RE.match(name) and isinstance(u, dict):
+            out[name] = u
+        elif isinstance(name, str) and isinstance(u, dict):
+            # keep oddly-named records so we do not silently drop them
+            out[name] = u
+    return out
 
 
 def save_users(users):
@@ -1181,6 +1203,8 @@ def parse_secrets_users():
 
 def import_secrets_if_needed():
     users = load_users()
+    if not isinstance(users, dict):
+        users = {}
     changed = False
     for name, pw in parse_secrets_users():
         if name not in users:
@@ -1249,10 +1273,23 @@ def write_secrets(users=None, psk=None, public_ip=None, domain=None):
             lines.append('%s : EAP "%s"' % (name, pw))
         if flag_on(u, "l2tp_enabled", True):
             chap.append('%s  l2tpd  "%s"  *' % (name, pw))
-    IPSEC_SECRETS.write_text("\n".join(lines) + "\n", encoding="utf-8")
-    os.chmod(IPSEC_SECRETS, 0o600)
-    CHAP_SECRETS.write_text("\n".join(chap) + "\n", encoding="utf-8")
-    os.chmod(CHAP_SECRETS, 0o600)
+    text = "\n".join(lines) + "\n"
+    chap_text = "\n".join(chap) + "\n"
+    try:
+        IPSEC_SECRETS.parent.mkdir(parents=True, exist_ok=True)
+        CHAP_SECRETS.parent.mkdir(parents=True, exist_ok=True)
+        IPSEC_SECRETS.write_text(text, encoding="utf-8")
+        try:
+            os.chmod(IPSEC_SECRETS, 0o600)
+        except OSError:
+            pass
+        CHAP_SECRETS.write_text(chap_text, encoding="utf-8")
+        try:
+            os.chmod(CHAP_SECRETS, 0o600)
+        except OSError:
+            pass
+    except OSError:
+        return
     run(["ipsec", "rereadsecrets"])
 
 
@@ -2222,14 +2259,30 @@ def fmt_uptime(sec):
 
 def dashboard_payload():
     users = import_secrets_if_needed()
+    if not isinstance(users, dict):
+        users = {}
     sessions = parse_sessions()
-    online = sorted({s["user"] for s in sessions if s.get("user")})
+    if not isinstance(sessions, list):
+        sessions = []
+    online = sorted({s["user"] for s in sessions if isinstance(s, dict) and s.get("user")})
     hs = host_stats()
     rows = []
     for name, u in sorted(users.items()):
+        if not isinstance(u, dict):
+            continue
         block = user_blocked(u)
-        q = float(u.get("quota_gb") or 0)
-        used = float(u.get("used_bytes") or 0)
+        try:
+            q = float(u.get("quota_gb") or 0)
+            if not math.isfinite(q) or q < 0:
+                q = 0
+        except (TypeError, ValueError):
+            q = 0
+        try:
+            used = float(u.get("used_bytes") or 0)
+            if not math.isfinite(used) or used < 0:
+                used = 0
+        except (TypeError, ValueError):
+            used = 0
         ses = next((s for s in sessions if s.get("user") == name), None)
         rows.append(
             {
