@@ -2278,13 +2278,14 @@ def login():
     return render_template("login.html", err=err, host=host)
 
 
+@app.route("/logout", methods=["POST"])
+@login_required
+@csrf_required
 def logout():
     session.clear()
     return redirect(url_for("login"))
 
 
-@app.route("/")
-@login_required
 def page_chrome(page, title_key, subtitle_key, extra=None):
     d = dashboard_payload()
     d["admin_user"] = load_admin().get("user") or ""
@@ -2296,6 +2297,8 @@ def page_chrome(page, title_key, subtitle_key, extra=None):
     return d
 
 
+@app.route("/")
+@login_required
 def index():
     return render_template("index.html", **page_chrome("dash", "dash_title", "dash_sub"))
 
