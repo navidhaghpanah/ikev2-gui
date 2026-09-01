@@ -409,13 +409,15 @@ I18N = {
         "smart_no_users": "ابتدا یک کاربر بسازید.",
         "smart_no_match": "با این شرایط هیچ پروتکل مناسبی نماند. پورت اضافه یا UDP احتمالاً مسدود فرض شده‌اند.",
         "smart_honest_443": "فقط TCP ۸۰/۴۴۳ و UDP مسدود: پورت‌های اضافه (۸۴۴۳ / ۲۰۵۳ / ۱۰۸۰۹ / ۳۱۲۸ / Shadowsocks) احتمالاً کار نمی‌کنند. IKEv2 و L2TP به UDP ۵۰۰/۱۷۰۱ نیاز دارند. Hysteria2 به UDP ۴۴۳ نیاز دارد.",
-        "smart_ai_box": "توضیح مدل (اختیاری)",
+        "smart_ai_box": "بازبینی مدل",
         "smart_ai_none": "Gateway یا کلید تنظیم نشده؛ فقط رتبهٔ قاعده‌ای.",
-        "smart_ai_fail": "توضیح مدل ناموفق بود؛ همان رتبهٔ قاعده‌ای نمایش داده شد.",
+        "smart_ai_fail": "بازبینی مدل ناموفق بود؛ همان رتبهٔ قاعده‌ای ماند.",
+        "smart_ai_changed": "مدل رتبه را عوض کرد",
+        "smart_ai_kept": "مدل همان رتبه را تأیید کرد",
         "smart_pick": "پیشنهاد اول",
         "smart_skipped": "ردشده",
         "card_ai": "اتصال هوشمند — مدل (اختیاری)",
-        "card_ai_p": "سازگار با OpenAI از پنل AIaaS ابر آروان. رتبه بدون کلید هم کار می‌کند. مدل فقط روی JSON موجودی+فرم+رتبه توضیح می‌دهد و حق ندارد پورت یا پروتکل تازه‌ای اختراع کند. آدرس napi.arvancloud.ir نیست.",
+        "card_ai_p": "سازگار با OpenAI از پنل AIaaS ابر آروان. رتبهٔ قاعده‌ای بدون کلید هم کار می‌کند. اگر کلید باشد مدل همان کاندیداها را بازبینی می‌کند و می‌تواند ترتیب و امتیاز را عوض کند، ولی پروتکل یا پورت تازه اختراع نمی‌کند. آدرس napi.arvancloud.ir نیست.",
         "ai_base": "Gateway URL",
         "ai_base_h": "آدرس کامل Gateway را از پنل AIaaS آروان بچسبانید (پایهٔ OpenAI-compatible، معمولاً با /v1).",
         "ai_base_ph": "https://…/v1",
@@ -762,13 +764,15 @@ I18N = {
         "smart_no_users": "Create a user first.",
         "smart_no_match": "No protocol fits these conditions. Extra TCP ports or UDP were treated as blocked.",
         "smart_honest_443": "Only TCP 80/443 and UDP blocked: extra ports (8443 / 2053 / 10809 / 3128 / Shadowsocks) probably will not work. IKEv2/L2TP need UDP 500/1701. Hysteria2 needs UDP 443.",
-        "smart_ai_box": "Model explanation (optional)",
+        "smart_ai_box": "Model review",
         "smart_ai_none": "No Gateway or API key; rules ranking only.",
-        "smart_ai_fail": "Model explanation failed; showing the rules ranking only.",
+        "smart_ai_fail": "Model review failed; keeping the rules ranking.",
+        "smart_ai_changed": "Model changed the ranking",
+        "smart_ai_kept": "Model kept the rules ranking",
         "smart_pick": "Top pick",
         "smart_skipped": "Skipped",
         "card_ai": "Smart Connect — model (optional)",
-        "card_ai_p": "OpenAI-compatible endpoint from the Arvan Cloud AIaaS panel. Ranking works with no key. The model may only explain the inventory+form+ranked JSON and must not invent protocols or open ports. Not napi.arvancloud.ir.",
+        "card_ai_p": "OpenAI-compatible endpoint from the Arvan Cloud AIaaS panel. Rules ranking works with no key. With a key, the model reviews those candidates and may change order and scores, but must not invent protocols or ports. Not napi.arvancloud.ir.",
         "ai_base": "Gateway URL",
         "ai_base_h": "Paste the full Gateway URL from the Arvan AIaaS panel (OpenAI-compatible base, usually ending in /v1).",
         "ai_base_ph": "https://…/v1",
@@ -2354,11 +2358,18 @@ def smart_page():
             result = rank_smart_connect(name, u, cfg, form, current_lang())
             if not result["ranked"]:
                 flash_t("smart_no_match")
-            ai_text, ai_st = smart_ai_explain(result, current_lang())
+            before_ids = [r.get("id") for r in (result.get("ranked") or [])]
+            ai_text, ai_st, ai_ranked = smart_ai_review(result, current_lang())
             if ai_st == "fail":
                 flash_t("smart_ai_fail")
+            changed = False
+            if ai_ranked:
+                after_ids = [r.get("id") for r in ai_ranked]
+                changed = after_ids != before_ids
+                result["ranked"] = ai_ranked
             result["ai_text"] = ai_text or ""
             result["ai_status"] = ai_st
+            result["ai_changed"] = changed
     extra = {
         "user_names": names,
         "form": form,
@@ -2875,7 +2886,8 @@ def rank_smart_connect(name, u, cfg, form, lang="fa"):
     if ranked and ranked[0]["id"] == "http" and len(ranked) > 1:
         http_row = ranked.pop(0)
         ranked.append(http_row)
-    top = ranked[:3]
+    candidates = [dict(r) for r in ranked]
+    top = [dict(r) for r in ranked[:3]]
     for i, row in enumerate(top, 1):
         row["rank"] = i
     honest = (form.get("path") == "only443" and form.get("udp") == "blocked")
@@ -2890,6 +2902,7 @@ def rank_smart_connect(name, u, cfg, form, lang="fa"):
             "native": bool(form.get("native")),
         },
         "ranked": top,
+        "candidates": candidates,
         "skipped": skipped,
         "honest_443": honest,
     }
@@ -2949,46 +2962,124 @@ def _ai_base_ok(base):
     return True
 
 
-def smart_ai_explain(result, lang):
+def _extract_json_object(text):
+    text = (text or "").strip()
+    if text.startswith("```"):
+        text = re.sub(r"^```(?:json)?", "", text, flags=re.I).strip()
+        text = re.sub(r"```\s*$", "", text).strip()
+    start = text.find("{")
+    end = text.rfind("}")
+    if start < 0 or end <= start:
+        return None
+    try:
+        data = json.loads(text[start : end + 1])
+    except (TypeError, ValueError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def _ai_reason_ok(text):
+    text = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", "", str(text or "")).strip()
+    return text[:400]
+
+
+def _apply_ai_ranked(result, payload):
+    """Keep URIs/labels from candidates. Drop invented or skipped protocol ids."""
+    by_id = {}
+    for row in (result.get("candidates") or result.get("ranked") or []):
+        pid = row.get("id")
+        if pid:
+            by_id[pid] = row
+    skipped = {s.get("id") for s in (result.get("skipped") or []) if s.get("id")}
+    raw = payload.get("ranked") if isinstance(payload, dict) else None
+    if not isinstance(raw, list):
+        return None
+    out = []
+    seen = set()
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        pid = str(item.get("id") or "").strip()
+        if pid not in by_id or pid in skipped or pid in seen:
+            continue
+        try:
+            score = int(item.get("score"))
+        except (TypeError, ValueError):
+            score = int(by_id[pid].get("score") or 0)
+        score = max(0, min(100, score))
+        row = dict(by_id[pid])
+        row["score"] = score
+        reason = _ai_reason_ok(item.get("reason"))
+        if reason:
+            row["reason"] = reason
+        out.append(row)
+        seen.add(pid)
+        if len(out) >= 3:
+            break
+    if not out:
+        return None
+    if out[0]["id"] == "http" and len(out) > 1:
+        http_row = out.pop(0)
+        out.append(http_row)
+    for i, row in enumerate(out, 1):
+        row["rank"] = i
+    return out
+
+
+def smart_ai_review(result, lang):
     """Optional OpenAI-compatible chat. Never logs the key. 12s timeout.
 
-    Sends ONLY inventory+form+ranked JSON. Must not invent protocols/ports.
+    Ranker runs first. Model may reorder/rescore candidates from inventory.
+    Must not invent protocols/ports. On failure, keep the rules ranking.
+    Returns (explain_text, status, new_ranked_or_None).
     """
     cfg = load_config()
     key = (cfg.get("ai_api_key") or "").strip()
     base = (cfg.get("ai_base") or "").strip()
     model = (cfg.get("ai_model") or "").strip()
     if not key or not base or not model:
-        return None, "none"
+        return None, "none", None
     if not _ai_base_ok(base):
-        return None, "fail"
+        return None, "fail", None
+    candidates = result.get("candidates") or result.get("ranked") or []
+    if not candidates:
+        return None, "none", None
     url = _ai_chat_url(base)
     payload = {
         "inventory": result.get("inventory"),
         "form": result.get("form"),
-        "ranked": [
+        "candidates": [
             {
                 "id": r.get("id"),
                 "score": r.get("score"),
                 "reason": r.get("reason"),
             }
+            for r in candidates
+        ],
+        "ranked_now": [
+            {"id": r.get("id"), "score": r.get("score")}
             for r in (result.get("ranked") or [])
         ],
+        "skipped": result.get("skipped") or [],
         "honest_443": result.get("honest_443"),
     }
     lang_name = "Persian" if lang == "fa" else "English"
     system = (
-        "You explain a VPN protocol ranking. Use ONLY the JSON facts. "
-        "Do not add protocols, open ports, or ISP reachability that is not in the JSON. "
-        "Inventory is server-side (listening/configured), not a client probe. "
-        "Reply in %s, short (max 8 sentences)."
+        "You review a VPN protocol ranking and MAY change order, scores, or drop items. "
+        "Use ONLY protocol ids from candidates. Never invent protocols, ports, or ISP reachability. "
+        "Do not pick skipped ids. Inventory is server-side (listening/configured), not a client probe. "
+        "HTTP must not be rank 1 unless it is the only item. "
+        "Reply with JSON only, no markdown: "
+        '{"ranked":[{"id":"hy","score":95,"reason":"..."}],"explain":"..."} '
+        "ranked has 1 to 3 unique candidate ids, score 0-100. "
+        "explain is short %s (max 8 sentences) saying whether you kept or changed the order and why."
         % lang_name
     )
     body = json.dumps(
         {
             "model": model,
             "temperature": 0.2,
-            "max_tokens": 400,
+            "max_tokens": 500,
             "messages": [
                 {"role": "system", "content": system},
                 {"role": "user", "content": json.dumps(payload, ensure_ascii=False)},
@@ -3010,11 +3101,24 @@ def smart_ai_explain(result, lang):
         text = (
             (((data.get("choices") or [{}])[0]).get("message") or {}).get("content") or ""
         ).strip()
-        if not text:
-            return None, "fail"
-        return text, "ok"
+        parsed = _extract_json_object(text)
+        if not parsed:
+            return None, "fail", None
+        new_ranked = _apply_ai_ranked(result, parsed)
+        explain = _ai_reason_ok(parsed.get("explain") or "")
+        if not explain and new_ranked:
+            explain = text[:400]
+        if not new_ranked:
+            return (explain or None), "fail", None
+        return (explain or None), "ok", new_ranked
     except Exception:
-        return None, "fail"
+        return None, "fail", None
+
+
+def smart_ai_explain(result, lang):
+    text, status, _ranked = smart_ai_review(result, lang)
+    return text, status
+
 
 
 def ss_uri(name, u, cfg):
