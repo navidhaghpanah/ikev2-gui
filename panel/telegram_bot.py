@@ -240,7 +240,7 @@ def handle_smart_pick(chat_id, message_id, name, os_, udp):
     if not u:
         send(chat_id, "کاربر پیدا نشد.", main_menu(), message_id)
         return
-    form = {"os": os_, "net": "unknown", "udp": udp, "path": "unknown", "native": False}
+    form = {"os": os_, "net": "mobile", "udp": udp, "path": "unknown", "native": False, "filter": "iran"}
     result = panel.rank_smart_connect(name, u, panel.load_config(), form, "fa")
     _text, _st, ai_ranked = panel.smart_ai_review(result, "fa")
     if ai_ranked:
@@ -253,7 +253,7 @@ def handle_smart_pick(chat_id, message_id, name, os_, udp):
     top = ranked[0]
     lines = [
         "⚡ <b>اتصال هوشمند</b> — %s" % name,
-        "شرایط: OS=%s  UDP=%s  (موجودی سرور، نه پروب ISP)" % (os_, udp),
+        "شرایط: OS=%s  UDP=%s  فیلترینگ=ایران  (موجودی سرور، نه پروب ISP)" % (os_, udp),
         "",
         "پیشنهاد: <b>%s</b> (امتیاز %s)" % (top["label"], top["score"]),
         top.get("reason") or "",
