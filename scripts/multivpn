@@ -85,6 +85,11 @@ cmd_update() {
   if [[ -f "$REPO_DIR/scripts/multivpn" ]]; then
     install -m 0755 "$REPO_DIR/scripts/multivpn" "$CLI_BIN"
   fi
+  # mtg binary + ufw 2053/10809/3128 + systemd units. Does not restart xl2tpd/nginx.
+  if [[ -f "$REPO_DIR/install.sh" ]]; then
+    echo "extra protocols: EXTRA_ONLY=1 bash install.sh"
+    EXTRA_ONLY=1 bash "$REPO_DIR/install.sh"
+  fi
   systemctl restart "$PANEL_UNIT"
   sleep 1
   if systemctl is-active --quiet "$PANEL_UNIT"; then
@@ -124,7 +129,7 @@ cmd_uninstall() {
     echo "Panel hazf shod. Data: $CFG_DIR va $DATA_DIR mond."
   fi
   # protocol-haye extra age PR #4 / SS / Hysteria nasb shode
-  systemctl disable --now panel-shadowsocks panel-hysteria 2>/dev/null || true
+  systemctl disable --now panel-shadowsocks panel-hysteria panel-mtg 2>/dev/null || true
   rm -f "$CLI_BIN"
   echo "CLI ham az $CLI_BIN hazf shod."
 }
@@ -140,7 +145,7 @@ cmd_status() {
   echo "APP_DIR=$APP_DIR"
   echo "REPO_DIR=$REPO_DIR"
   echo
-  for u in "$PANEL_UNIT" nginx strongswan-starter xl2tpd panel-shadowsocks panel-hysteria; do
+  for u in "$PANEL_UNIT" nginx strongswan-starter xl2tpd panel-shadowsocks panel-hysteria panel-mtg; do
     if systemctl list-unit-files "$u.service" >/dev/null 2>&1; then
       printf '%-22s %s\n' "$u" "$(systemctl is-active "$u" 2>/dev/null || echo n/a)"
     fi
