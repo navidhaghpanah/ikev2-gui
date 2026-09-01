@@ -363,6 +363,70 @@ I18N = {
         "expired": "منقضی",
         "quota_full": "اتمام حجم",
         "quota_nan": "حجم نامعتبر",
+        "nav_smart": "اتصال هوشمند",
+        "smart_title": "اتصال هوشمند",
+        "smart_sub": "رتبه‌بندی پروتکل از موجودی VPS و شرایط کلاینت",
+        "smart_intro": "این صفحه اینترنت کلاینت را پروب نمی‌کند — مرورگر نمی‌تواند UDP را تست کند. رتبه از موجودی همین سرور به‌علاوه شرایطی است که وارد می‌کنید؛ باز بودن پورت از ISP ادعا نمی‌شود مگر خودتان در فرم گفته باشید.",
+        "smart_user": "کاربر",
+        "smart_os": "سیستم‌عامل / کلاینت",
+        "smart_net": "شبکه",
+        "smart_udp": "UDP",
+        "smart_path": "مسیر TCP",
+        "smart_native": "ترجیح VPN داخلی سیستم‌عامل",
+        "smart_os_windows": "ویندوز",
+        "smart_os_ios": "iOS",
+        "smart_os_android": "اندروید",
+        "smart_os_linux": "لینوکس",
+        "smart_os_mac": "macOS",
+        "smart_os_telegram": "تلگرام",
+        "smart_net_wifi": "وای‌فای",
+        "smart_net_mobile": "موبایل",
+        "smart_net_unknown": "نامشخص",
+        "smart_udp_ok": "باز / سالم",
+        "smart_udp_blocked": "مسدود",
+        "smart_udp_unknown": "نامشخص",
+        "smart_path_extra": "پورت‌های غیر از ۸۰/۴۴۳ احتمالاً بازند",
+        "smart_path_only443": "فقط TCP ۸۰/۴۴۳",
+        "smart_path_unknown": "نامشخص",
+        "smart_submit": "رتبه‌بندی کن",
+        "smart_results": "پیشنهادهای رتبه‌بندی‌شده",
+        "smart_rank": "رتبه",
+        "smart_score": "امتیاز",
+        "smart_reason": "دلیل",
+        "smart_uri": "لینک اتصال",
+        "smart_host_user": "میزبان و کاربر (URI ساختگی ندارد)",
+        "smart_open": "صفحهٔ کلاینت این پروتکل",
+        "smart_inventory": "موجودی این VPS",
+        "smart_inventory_p": "سرویس و پورت پیکربندی‌شده روی سرور؛ یعنی «اینجا گوش می‌دهد»، نه «از ISP کلاینت می‌رسد».",
+        "smart_le": "گواهی Let’s Encrypt دامنه",
+        "smart_reality": "کلیدهای Reality",
+        "smart_ufw": "ufw",
+        "smart_yes": "هست",
+        "smart_no": "نیست",
+        "smart_unk": "نامشخص",
+        "smart_svc": "سرویس‌ها",
+        "smart_ports": "پورت‌های پیکربندی",
+        "smart_no_users": "ابتدا یک کاربر بسازید.",
+        "smart_no_match": "با این شرایط هیچ پروتکل مناسبی نماند. پورت اضافه یا UDP احتمالاً مسدود فرض شده‌اند.",
+        "smart_honest_443": "فقط TCP ۸۰/۴۴۳ و UDP مسدود: پورت‌های اضافه (۸۴۴۳ / ۲۰۵۳ / ۱۰۸۰۹ / ۳۱۲۸ / Shadowsocks) احتمالاً کار نمی‌کنند. IKEv2 و L2TP به UDP ۵۰۰/۱۷۰۱ نیاز دارند. Hysteria2 به UDP ۴۴۳ نیاز دارد.",
+        "smart_ai_box": "توضیح مدل (اختیاری)",
+        "smart_ai_none": "Gateway یا کلید تنظیم نشده؛ فقط رتبهٔ قاعده‌ای.",
+        "smart_ai_fail": "توضیح مدل ناموفق بود؛ همان رتبهٔ قاعده‌ای نمایش داده شد.",
+        "smart_pick": "پیشنهاد اول",
+        "smart_skipped": "ردشده",
+        "card_ai": "اتصال هوشمند — مدل (اختیاری)",
+        "card_ai_p": "سازگار با OpenAI از پنل AIaaS ابر آروان. رتبه بدون کلید هم کار می‌کند. مدل فقط روی JSON موجودی+فرم+رتبه توضیح می‌دهد و حق ندارد پورت یا پروتکل تازه‌ای اختراع کند. آدرس napi.arvancloud.ir نیست.",
+        "ai_base": "Gateway URL",
+        "ai_base_h": "آدرس کامل Gateway را از پنل AIaaS آروان بچسبانید (پایهٔ OpenAI-compatible، معمولاً با /v1).",
+        "ai_base_ph": "https://…/v1",
+        "ai_model": "model",
+        "ai_model_h": "شناسهٔ دقیق مدل همان endpoint را بچسبانید؛ از پیش پر نمی‌شود.",
+        "ai_api_key": "API key",
+        "ai_api_key_h": "اگر خالی بماند کلید قبلی حفظ می‌شود.",
+        "ai_api_key_clear": "حذف کلید ذخیره‌شده",
+        "save_ai": "ذخیرهٔ تنظیمات مدل",
+        "ai_ok": "تنظیمات مدل ذخیره شد.",
+        "ai_base_bad": "Gateway URL نامعتبر است؛ باید HTTPS بدون اطلاعات ورود در آدرس باشد.",
     },
     "en": {
         "brand_sub": "Private network admin",
@@ -652,6 +716,70 @@ I18N = {
         "expired": "expired",
         "quota_full": "quota used",
         "quota_nan": "invalid quota",
+        "nav_smart": "Smart Connect",
+        "smart_title": "Smart Connect",
+        "smart_sub": "Rank the best protocol from VPS inventory and client conditions",
+        "smart_intro": "This page does not probe the client ISP — browsers cannot test UDP. Ranking uses this VPS inventory plus the conditions you enter. A port is not claimed reachable from the client unless the form said so.",
+        "smart_user": "User",
+        "smart_os": "OS / client",
+        "smart_net": "Network",
+        "smart_udp": "UDP",
+        "smart_path": "TCP path",
+        "smart_native": "Prefer OS built-in VPN",
+        "smart_os_windows": "Windows",
+        "smart_os_ios": "iOS",
+        "smart_os_android": "Android",
+        "smart_os_linux": "Linux",
+        "smart_os_mac": "macOS",
+        "smart_os_telegram": "Telegram",
+        "smart_net_wifi": "Wi-Fi",
+        "smart_net_mobile": "Mobile",
+        "smart_net_unknown": "Unknown",
+        "smart_udp_ok": "OK / open",
+        "smart_udp_blocked": "Blocked",
+        "smart_udp_unknown": "Unknown",
+        "smart_path_extra": "Non-80/443 TCP is likely open",
+        "smart_path_only443": "Only TCP 80/443",
+        "smart_path_unknown": "Unknown",
+        "smart_submit": "Rank protocols",
+        "smart_results": "Ranked recommendations",
+        "smart_rank": "Rank",
+        "smart_score": "Score",
+        "smart_reason": "Reason",
+        "smart_uri": "Connection URI",
+        "smart_host_user": "Host and user (no fake URI)",
+        "smart_open": "Open this protocol’s client page",
+        "smart_inventory": "This VPS inventory",
+        "smart_inventory_p": "Configured listeners and flags on the server — not a client-ISP reachability test.",
+        "smart_le": "Let’s Encrypt cert for domain",
+        "smart_reality": "Reality keys",
+        "smart_ufw": "ufw",
+        "smart_yes": "yes",
+        "smart_no": "no",
+        "smart_unk": "unknown",
+        "smart_svc": "Services",
+        "smart_ports": "Configured ports",
+        "smart_no_users": "Create a user first.",
+        "smart_no_match": "No protocol fits these conditions. Extra TCP ports or UDP were treated as blocked.",
+        "smart_honest_443": "Only TCP 80/443 and UDP blocked: extra ports (8443 / 2053 / 10809 / 3128 / Shadowsocks) probably will not work. IKEv2/L2TP need UDP 500/1701. Hysteria2 needs UDP 443.",
+        "smart_ai_box": "Model explanation (optional)",
+        "smart_ai_none": "No Gateway or API key; rules ranking only.",
+        "smart_ai_fail": "Model explanation failed; showing the rules ranking only.",
+        "smart_pick": "Top pick",
+        "smart_skipped": "Skipped",
+        "card_ai": "Smart Connect — model (optional)",
+        "card_ai_p": "OpenAI-compatible endpoint from the Arvan Cloud AIaaS panel. Ranking works with no key. The model may only explain the inventory+form+ranked JSON and must not invent protocols or open ports. Not napi.arvancloud.ir.",
+        "ai_base": "Gateway URL",
+        "ai_base_h": "Paste the full Gateway URL from the Arvan AIaaS panel (OpenAI-compatible base, usually ending in /v1).",
+        "ai_base_ph": "https://…/v1",
+        "ai_model": "model",
+        "ai_model_h": "Paste the exact model id from that endpoint; nothing is pre-filled.",
+        "ai_api_key": "API key",
+        "ai_api_key_h": "Leave empty to keep the stored key.",
+        "ai_api_key_clear": "Remove stored key",
+        "save_ai": "Save model settings",
+        "ai_ok": "Model settings saved.",
+        "ai_base_bad": "Invalid Gateway URL; use HTTPS with no credentials in the URL.",
     },
 }
 
@@ -876,6 +1004,15 @@ def load_config():
         changed = True
     if cfg.get("lang") not in ("fa", "en"):
         cfg["lang"] = "fa"
+        changed = True
+    if "ai_base" not in cfg:
+        cfg["ai_base"] = ""
+        changed = True
+    if "ai_model" not in cfg:
+        cfg["ai_model"] = ""
+        changed = True
+    if "ai_api_key" not in cfg:
+        cfg["ai_api_key"] = ""
         changed = True
     if changed:
         save_json(CONFIG_FILE, cfg)
@@ -2181,6 +2318,58 @@ def clients_page():
     return render_template("clients.html", **page_chrome("clients", "clients_title", "clients_sub"))
 
 
+@app.route("/smart", methods=["GET", "POST"])
+@login_required
+def smart_page():
+    users = load_users()
+    names = sorted(users.keys())
+    form = {
+        "user": names[0] if names else "",
+        "os": "android",
+        "net": "unknown",
+        "udp": "unknown",
+        "path": "unknown",
+        "native": False,
+    }
+    result = None
+    ai_text = ""
+    if request.method == "POST":
+        submitted = request.form.get("csrf_token", "") or ""
+        expected = session.get("csrf", "") or ""
+        if not expected or not secrets.compare_digest(submitted, expected):
+            flash_t("csrf_bad")
+            return redirect(url_for("smart_page"))
+        form = parse_smart_form(request.form)
+        name = form["user"]
+        u = users.get(name)
+        if not names:
+            flash_t("smart_no_users")
+        elif not u:
+            flash_t("user_missing")
+        else:
+            cfg = load_config()
+            result = rank_smart_connect(name, u, cfg, form, current_lang())
+            if not result["ranked"]:
+                flash_t("smart_no_match")
+            ai_text, ai_st = smart_ai_explain(result, current_lang())
+            if ai_st == "fail":
+                flash_t("smart_ai_fail")
+            result["ai_text"] = ai_text or ""
+            result["ai_status"] = ai_st
+    extra = {
+        "user_names": names,
+        "form": form,
+        "result": result,
+        "os_opts": SMART_OS,
+        "net_opts": SMART_NET,
+        "udp_opts": SMART_UDP,
+        "path_opts": SMART_PATH,
+    }
+    return render_template("smart.html", **page_chrome("smart", "smart_title", "smart_sub", extra))
+
+
+
+
 @app.route("/settings")
 @login_required
 def settings():
@@ -2192,6 +2381,11 @@ def settings():
     d["telegram_admin_ids"] = ", ".join(str(i) for i in (cfg.get("telegram_admin_ids") or []))
     d["update_info"] = update_status()
     d["domain"] = (cfg.get("domain") or "").strip()
+    d["ai_base"] = (cfg.get("ai_base") or "").strip()
+    d["ai_model"] = (cfg.get("ai_model") or "").strip()
+    ai_key = (cfg.get("ai_api_key") or "").strip()
+    d["ai_key_set"] = bool(ai_key)
+    d["ai_key_masked"] = ("••••" + ai_key[-4:]) if len(ai_key) >= 4 else ("••••" if ai_key else "")
     return render_template("settings.html", **d)
 
 
@@ -2261,6 +2455,563 @@ def clients_ios():
         as_attachment=True,
         download_name="IKEv2.mobileconfig",
     )
+
+
+
+
+SMART_OS = ("windows", "ios", "android", "linux", "mac", "telegram")
+SMART_NET = ("wifi", "mobile", "unknown")
+SMART_UDP = ("ok", "blocked", "unknown")
+SMART_PATH = ("extra_ok", "only443", "unknown")
+SMART_UNITS = (
+    "ikev2-l2tp-gui",
+    "strongswan-starter",
+    "xl2tpd",
+    "panel-shadowsocks",
+    "panel-hysteria",
+    "panel-mtg",
+)
+PROTO_LABELS_SMART = {
+    "ikev2": "IKEv2",
+    "l2tp": "L2TP",
+    "ss": "Shadowsocks",
+    "hy": "Hysteria2",
+    "vless": "VLESS Reality",
+    "vmess": "VMess",
+    "http": "HTTP",
+    "mtg": "MTProto",
+}
+# Port class used only from the client form — never from a packet probe.
+# extra TCP: VLESS 8443, VMess 2053, HTTP 10809, MTProto 3128, SS per-user
+# UDP 500/4500/1701: IKEv2 / L2TP
+# UDP 443: Hysteria2
+PROTO_PORT_CLASS = {
+    "ikev2": "udp_ike",
+    "l2tp": "udp_ike",
+    "hy": "udp_443",
+    "vless": "extra_tcp",
+    "vmess": "extra_tcp",
+    "http": "extra_tcp",
+    "mtg": "extra_tcp",
+    "ss": "extra_tcp",
+}
+
+
+def _systemctl_active(unit):
+    try:
+        p = subprocess.run(
+            ["systemctl", "is-active", unit],
+            capture_output=True,
+            text=True,
+            timeout=3,
+        )
+        return (p.stdout or "").strip() == "active"
+    except Exception:
+        return None
+
+
+def _ufw_active():
+    try:
+        p = subprocess.run(
+            ["ufw", "status"],
+            capture_output=True,
+            text=True,
+            timeout=3,
+        )
+        out = (p.stdout or "") + (p.stderr or "")
+        if "Status: active" in out:
+            return True
+        if "Status: inactive" in out:
+            return False
+        return None
+    except Exception:
+        return None
+
+
+def smart_vps_inventory(name, u, cfg):
+    """Collect what this VPS actually has. Listening/configured, not ISP-reachable."""
+    domain = (cfg.get("domain") or "").strip()
+    fullchain, privkey = le_cert_paths(domain)
+    le_ok = bool(domain) and fullchain.is_file() and privkey.is_file()
+    services = {}
+    for unit in SMART_UNITS:
+        services[unit] = _systemctl_active(unit)
+    ports = {
+        "vless": int(cfg.get("vless_port") or 8443),
+        "vmess": int(cfg.get("vmess_port") or 2053),
+        "http": int(cfg.get("http_port") or 10809),
+        "mtg": int(cfg.get("mtg_port") or 3128),
+        "hy": "%s/udp" % int(cfg.get("hy_port") or 443),
+        "ss": int(u.get("ss_port") or 0) or None,
+    }
+    return {
+        "note": "server inventory: configured/listening on this VPS, not a client-ISP probe",
+        "user": name,
+        "domain": domain,
+        "public_ip": (cfg.get("public_ip") or "").strip(),
+        "flags": {
+            "ikev2": flag_on(u, "ikev2_enabled", True),
+            "l2tp": flag_on(u, "l2tp_enabled", True),
+            "ss": bool(u.get("ss_enabled")),
+            "hy": bool(u.get("hy_enabled")),
+            "vless": bool(u.get("vless_enabled")),
+            "vmess": bool(u.get("vmess_enabled")),
+            "http": bool(u.get("http_enabled")),
+            "mtg": bool(u.get("mtg_enabled")),
+        },
+        "services": services,
+        "le_cert": le_ok,
+        "reality_public": bool((cfg.get("reality_public") or "").strip()),
+        "mtg_secret": bool((cfg.get("mtg_secret") or "").strip()),
+        "ports": ports,
+        "ufw_active": _ufw_active(),
+    }
+
+
+def _smart_reason(key, lang, **kwargs):
+    table = {
+        "telegram_mtg": {
+            "fa": "کلاینت تلگرام است و MTProto روی این کاربر و سرویس mtg فعال است.",
+            "en": "Client is Telegram and MTProto is enabled for this user with mtg present.",
+        },
+        "hy_mobile": {
+            "fa": "UDP باز است، گواهی LE هست، و روی موبایل Hysteria2 (UDP ۴۴۳) معمولاً پایدارترین گزینه است.",
+            "en": "UDP is OK, LE cert exists, and on mobile Hysteria2 (UDP 443) is usually the most stable pick.",
+        },
+        "hy_udp": {
+            "fa": "UDP باز و گواهی LE موجود است؛ Hysteria2 روی UDP ۴۴۳ امتیاز بالایی می‌گیرد.",
+            "en": "UDP is OK and an LE cert is present; Hysteria2 on UDP 443 scores high.",
+        },
+        "hy_udp_unk": {
+            "fa": "گواهی LE هست اما UDP نامشخص است؛ Hysteria2 فقط اگر UDP ۴۴۳ برسد کار می‌کند.",
+            "en": "LE cert is present but UDP is unknown; Hysteria2 only works if UDP 443 arrives.",
+        },
+        "vless_extra": {
+            "fa": "VLESS Reality روی TCP اضافه (پیش‌فرض ۸۴۴۳) ضدپروب است و به گواهی LE نیاز ندارد.",
+            "en": "VLESS Reality on extra TCP (default 8443) is anti-probe and needs no LE cert.",
+        },
+        "vless_unk": {
+            "fa": "مسیر TCP نامشخص است؛ VLESS Reality بدون LE و با ضدپروب هنوز گزینهٔ قوی است.",
+            "en": "TCP path is unknown; VLESS Reality still ranks high (no LE, anti-probe).",
+        },
+        "vmess_extra": {
+            "fa": "گواهی LE هست و پورت TCP اضافه برای VMess WS+TLS باز فرض شده.",
+            "en": "LE cert exists and extra TCP is assumed open for VMess WS+TLS.",
+        },
+        "vmess_unk": {
+            "fa": "گواهی LE هست اما مسیر TCP نامشخص است؛ VMess به پورت اضافه نیاز دارد.",
+            "en": "LE cert exists but TCP path is unknown; VMess still needs an extra TCP port.",
+        },
+        "ss_extra": {
+            "fa": "Shadowsocks روی پورت اختصاصی TCP/UDP این کاربر است؛ پورت اضافه باز فرض شده.",
+            "en": "Shadowsocks uses this user’s extra TCP/UDP port; extra path is assumed open.",
+        },
+        "ss_unk": {
+            "fa": "مسیر TCP نامشخص است؛ Shadowsocks فقط اگر پورت اختصاصی برسد کار می‌کند.",
+            "en": "TCP path is unknown; Shadowsocks only works if the per-user port arrives.",
+        },
+        "ike_native": {
+            "fa": "VPN داخلی سیستم‌عامل ترجیح داده شده و UDP مسدود نیست؛ IKEv2 بهترین گزینهٔ native است.",
+            "en": "OS built-in VPN is preferred and UDP is not blocked; IKEv2 is the native pick.",
+        },
+        "ike_os": {
+            "fa": "این سیستم‌عامل IKEv2 داخلی دارد و UDP مسدود نیست.",
+            "en": "This OS has built-in IKEv2 and UDP is not blocked.",
+        },
+        "ike_other": {
+            "fa": "IKEv2 روی سرور فعال است و UDP مسدود نیست؛ روی این OS معمولاً strongSwan لازم است.",
+            "en": "IKEv2 is enabled and UDP is not blocked; this OS usually needs strongSwan.",
+        },
+        "l2_native_noike": {
+            "fa": "VPN داخلی خواسته شده، IKEv2 خاموش است و UDP مسدود نیست؛ L2TP گزینهٔ native باقی‌مانده است.",
+            "en": "Built-in VPN wanted, IKEv2 is off, UDP not blocked; L2TP is the remaining native option.",
+        },
+        "l2_low": {
+            "fa": "L2TP از IKEv2 ضعیف‌تر است (DPI آسان) ولی روی سرور فعال و UDP مسدود نیست.",
+            "en": "L2TP ranks below IKEv2 (easy DPI) but is enabled and UDP is not blocked.",
+        },
+        "http_last": {
+            "fa": "پروکسی HTTP آخرین گزینه است؛ پورت TCP اضافه می‌خواهد و برای عبور از سانسور ضعیف است.",
+            "en": "HTTP proxy is last; it needs extra TCP and is a weak censorship bypass.",
+        },
+        "generic": {
+            "fa": "با موجودی سرور و شرایط واردشده هم‌خوان است.",
+            "en": "Matches server inventory and the conditions you entered.",
+        },
+    }
+    text = (table.get(key) or table["generic"]).get(lang) or table[key]["en"]
+    if kwargs:
+        try:
+            return text % kwargs
+        except (TypeError, ValueError, KeyError):
+            return text
+    return text
+
+
+def _proto_enabled_for_user(pid, u):
+    if pid == "ikev2":
+        return flag_on(u, "ikev2_enabled", True)
+    if pid == "l2tp":
+        return flag_on(u, "l2tp_enabled", True)
+    if pid == "ss":
+        return bool(u.get("ss_enabled") and u.get("ss_key") and u.get("ss_port"))
+    if pid == "hy":
+        return bool(u.get("hy_enabled"))
+    if pid == "vless":
+        return bool(u.get("vless_enabled") and u.get("vless_uuid"))
+    if pid == "vmess":
+        return bool(u.get("vmess_enabled") and u.get("vmess_uuid"))
+    if pid == "http":
+        return bool(u.get("http_enabled"))
+    if pid == "mtg":
+        return bool(u.get("mtg_enabled"))
+    return False
+
+
+def _proto_inventory_ok(pid, inv):
+    if pid in ("hy", "vmess") and not inv.get("le_cert"):
+        return False
+    if pid == "vless" and not inv.get("reality_public"):
+        return False
+    if pid == "mtg":
+        if not inv.get("mtg_secret"):
+            return False
+        mtg_svc = (inv.get("services") or {}).get("panel-mtg")
+        if mtg_svc is False:
+            return False
+    return True
+
+
+def _port_class_allowed(pid, form):
+    """Do not recommend a protocol whose port class the form says is blocked."""
+    cls = PROTO_PORT_CLASS.get(pid)
+    path = form.get("path") or "unknown"
+    udp = form.get("udp") or "unknown"
+    if cls == "extra_tcp" and path == "only443":
+        return False
+    if cls in ("udp_ike", "udp_443") and udp == "blocked":
+        return False
+    return True
+
+
+def _score_protocol(pid, form, ikev2_on):
+    """Deterministic 0–100 heuristic. Documented scores; ranking runs with no API key.
+
+    - telegram OS → MTProto first if enabled
+    - udp=ok + hy + cert (caller already required cert) → Hysteria2 very high,
+      especially net=mobile
+    - VLESS Reality high when path is extra_ok or unknown (no LE, anti-probe)
+    - VMess only with cert (caller) and path extra_ok/unknown; downrank vs VLESS
+    - SS similar extra TCP/UDP; downrank only443 (caller skips only443)
+    - IKEv2 high if native or os in windows/ios/android/mac and UDP not blocked
+    - L2TP lower than IKEv2 (easy DPI) unless native and IKEv2 off and UDP ok
+    - HTTP last; extra TCP; never first unless everything else is impossible
+    """
+    os_ = form.get("os") or "unknown"
+    net = form.get("net") or "unknown"
+    udp = form.get("udp") or "unknown"
+    path = form.get("path") or "unknown"
+    native = bool(form.get("native"))
+    reason = "generic"
+    score = 40
+
+    if pid == "mtg":
+        score = 58
+        if path == "extra_ok":
+            score += 6
+        if os_ == "telegram":
+            score = 96
+            reason = "telegram_mtg"
+        else:
+            reason = "generic"
+    elif pid == "hy":
+        if udp == "ok":
+            score = 90
+            reason = "hy_udp"
+            if net == "mobile":
+                score = 97
+                reason = "hy_mobile"
+        else:
+            score = 56
+            reason = "hy_udp_unk"
+            if net == "mobile":
+                score += 6
+    elif pid == "vless":
+        if path == "extra_ok":
+            score = 86
+            reason = "vless_extra"
+        else:
+            score = 78
+            reason = "vless_unk"
+        if os_ == "telegram":
+            score -= 18
+    elif pid == "vmess":
+        if path == "extra_ok":
+            score = 68
+            reason = "vmess_extra"
+        else:
+            score = 58
+            reason = "vmess_unk"
+        if os_ == "telegram":
+            score -= 12
+    elif pid == "ss":
+        if path == "extra_ok":
+            score = 70
+            reason = "ss_extra"
+        else:
+            score = 60
+            reason = "ss_unk"
+        if udp == "ok":
+            score += 4
+        elif udp == "blocked":
+            score -= 8
+        if os_ == "telegram":
+            score -= 10
+    elif pid == "ikev2":
+        native_os = os_ in ("windows", "ios", "android", "mac")
+        if native or native_os:
+            score = 82 if native else 74
+            reason = "ike_native" if native else "ike_os"
+        elif os_ == "linux":
+            score = 58
+            reason = "ike_other"
+        else:
+            score = 42
+            reason = "ike_other"
+        if udp == "ok":
+            score += 6
+        if os_ == "telegram":
+            score = 22
+            reason = "ike_other"
+    elif pid == "l2tp":
+        if native and not ikev2_on:
+            score = 76
+            reason = "l2_native_noike"
+        else:
+            score = 40
+            reason = "l2_low"
+            if native:
+                score = 52
+        if udp == "ok":
+            score += 3
+        if os_ == "telegram":
+            score = 18
+            reason = "l2_low"
+    elif pid == "http":
+        score = 24 if path == "extra_ok" else 20
+        reason = "http_last"
+    return score, reason
+
+
+def _smart_uri_and_link(pid, name, u, cfg):
+    uri = ""
+    host = (cfg.get("domain") or cfg.get("public_ip") or "").strip()
+    endpoint = ""
+    client_url = ""
+    try:
+        if pid == "ss" and u.get("ss_key") and u.get("ss_port"):
+            uri = ss_uri(name, u, cfg)
+            client_url = "/clients/ss/%s" % urllib.parse.quote(name)
+        elif pid == "hy" and u.get("password"):
+            uri = hy_uri(name, u, cfg)
+            client_url = "/clients/hysteria/%s" % urllib.parse.quote(name)
+        elif pid == "vless" and u.get("vless_uuid"):
+            uri = vless_uri(name, u, cfg)
+            client_url = "/clients/vless/%s" % urllib.parse.quote(name)
+        elif pid == "vmess" and u.get("vmess_uuid"):
+            uri = vmess_uri(name, u, cfg)
+            client_url = "/clients/vmess/%s" % urllib.parse.quote(name)
+        elif pid == "http" and u.get("password"):
+            uri = http_proxy_uri(name, u, cfg)
+            client_url = "/clients/http/%s" % urllib.parse.quote(name)
+        elif pid == "mtg":
+            uri = mtg_uri(cfg)
+            client_url = "/clients/mtg/%s" % urllib.parse.quote(name)
+        elif pid in ("ikev2", "l2tp"):
+            endpoint = "%s  ·  %s" % (host, name)
+            client_url = "/clients"
+    except Exception:
+        uri = ""
+    return uri, endpoint, client_url
+
+
+def rank_smart_connect(name, u, cfg, form, lang="fa"):
+    """Rank up to 3 protocols from inventory + form. Works with no LLM key."""
+    inv = smart_vps_inventory(name, u, cfg)
+    skipped = []
+    ranked = []
+    ikev2_on = _proto_enabled_for_user("ikev2", u) and _port_class_allowed("ikev2", form)
+    for pid in ("mtg", "hy", "vless", "vmess", "ss", "ikev2", "l2tp", "http"):
+        if not _proto_enabled_for_user(pid, u):
+            skipped.append({"id": pid, "why": "user_disabled"})
+            continue
+        if not _proto_inventory_ok(pid, inv):
+            skipped.append({"id": pid, "why": "inventory"})
+            continue
+        if not _port_class_allowed(pid, form):
+            skipped.append({"id": pid, "why": "port_class"})
+            continue
+        score, rkey = _score_protocol(pid, form, ikev2_on)
+        uri, endpoint, client_url = _smart_uri_and_link(pid, name, u, cfg)
+        ranked.append(
+            {
+                "id": pid,
+                "label": PROTO_LABELS_SMART[pid],
+                "score": int(score),
+                "reason_key": rkey,
+                "reason": _smart_reason(rkey, lang),
+                "reason_fa": _smart_reason(rkey, "fa"),
+                "reason_en": _smart_reason(rkey, "en"),
+                "uri": uri,
+                "endpoint": endpoint,
+                "client_url": client_url,
+            }
+        )
+    ranked.sort(key=lambda r: (-r["score"], r["id"]))
+    # HTTP never first unless everything else is impossible.
+    if ranked and ranked[0]["id"] == "http" and len(ranked) > 1:
+        http_row = ranked.pop(0)
+        ranked.append(http_row)
+    top = ranked[:3]
+    for i, row in enumerate(top, 1):
+        row["rank"] = i
+    honest = (form.get("path") == "only443" and form.get("udp") == "blocked")
+    return {
+        "inventory": inv,
+        "form": {
+            "user": name,
+            "os": form.get("os"),
+            "net": form.get("net"),
+            "udp": form.get("udp"),
+            "path": form.get("path"),
+            "native": bool(form.get("native")),
+        },
+        "ranked": top,
+        "skipped": skipped,
+        "honest_443": honest,
+    }
+
+
+def parse_smart_form(src):
+    name = (src.get("user") or "").strip()
+    os_ = (src.get("os") or "").strip()
+    net = (src.get("net") or "unknown").strip()
+    udp = (src.get("udp") or "unknown").strip()
+    path = (src.get("path") or "unknown").strip()
+    native_raw = src.get("native")
+    native = str(native_raw or "").strip() in ("1", "on", "true", "yes")
+    if os_ not in SMART_OS:
+        os_ = "windows"
+    if net not in SMART_NET:
+        net = "unknown"
+    if udp not in SMART_UDP:
+        udp = "unknown"
+    if path not in SMART_PATH:
+        path = "unknown"
+    return {
+        "user": name,
+        "os": os_,
+        "net": net,
+        "udp": udp,
+        "path": path,
+        "native": native,
+    }
+
+
+def _ai_chat_url(base):
+    base = (base or "").strip().rstrip("/")
+    if not base:
+        return ""
+    low = base.lower()
+    if low.endswith("/chat/completions"):
+        return base
+    return base + "/chat/completions"
+
+
+def _ai_base_ok(base):
+    base = (base or "").strip()
+    if not base:
+        return True
+    try:
+        u = urllib.parse.urlparse(base)
+    except ValueError:
+        return False
+    if u.scheme != "https" or not u.netloc:
+        return False
+    if u.username or u.password:
+        return False
+    host = (u.hostname or "").lower()
+    if host in ("napi.arvancloud.ir", "napi.arvancloud.com"):
+        return False
+    return True
+
+
+def smart_ai_explain(result, lang):
+    """Optional OpenAI-compatible chat. Never logs the key. 12s timeout.
+
+    Sends ONLY inventory+form+ranked JSON. Must not invent protocols/ports.
+    """
+    cfg = load_config()
+    key = (cfg.get("ai_api_key") or "").strip()
+    base = (cfg.get("ai_base") or "").strip()
+    model = (cfg.get("ai_model") or "").strip()
+    if not key or not base or not model:
+        return None, "none"
+    if not _ai_base_ok(base):
+        return None, "fail"
+    url = _ai_chat_url(base)
+    payload = {
+        "inventory": result.get("inventory"),
+        "form": result.get("form"),
+        "ranked": [
+            {
+                "id": r.get("id"),
+                "score": r.get("score"),
+                "reason": r.get("reason"),
+            }
+            for r in (result.get("ranked") or [])
+        ],
+        "honest_443": result.get("honest_443"),
+    }
+    lang_name = "Persian" if lang == "fa" else "English"
+    system = (
+        "You explain a VPN protocol ranking. Use ONLY the JSON facts. "
+        "Do not add protocols, open ports, or ISP reachability that is not in the JSON. "
+        "Inventory is server-side (listening/configured), not a client probe. "
+        "Reply in %s, short (max 8 sentences)."
+        % lang_name
+    )
+    body = json.dumps(
+        {
+            "model": model,
+            "temperature": 0.2,
+            "max_tokens": 400,
+            "messages": [
+                {"role": "system", "content": system},
+                {"role": "user", "content": json.dumps(payload, ensure_ascii=False)},
+            ],
+        }
+    ).encode("utf-8")
+    req = urllib.request.Request(
+        url,
+        data=body,
+        method="POST",
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + key,
+        },
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=12) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+        text = (
+            (((data.get("choices") or [{}])[0]).get("message") or {}).get("content") or ""
+        ).strip()
+        if not text:
+            return None, "fail"
+        return text, "ok"
+    except Exception:
+        return None, "fail"
 
 
 def ss_uri(name, u, cfg):
@@ -3093,6 +3844,31 @@ def settings_sessions():
         flash_t("sess_limit_cut", n=fa(len(terminated)) if current_lang()=="fa" else len(terminated))
     else:
         flash_t("sess_limit_ok")
+    return redirect(url_for("settings"))
+
+
+
+@app.route("/settings/ai", methods=["POST"])
+@login_required
+@csrf_required
+def settings_ai():
+    base = (request.form.get("ai_base") or "").strip()
+    model = (request.form.get("ai_model") or "").strip()[:128]
+    new_key = (request.form.get("ai_api_key") or "").strip()
+    clear = (request.form.get("ai_api_key_clear") or "") in ("1", "on")
+    if not _ai_base_ok(base):
+        flash_t("ai_base_bad")
+        return redirect(url_for("settings"))
+    with _lock:
+        cfg = load_config()
+        cfg["ai_base"] = base
+        cfg["ai_model"] = model
+        if clear:
+            cfg["ai_api_key"] = ""
+        elif new_key:
+            cfg["ai_api_key"] = new_key
+        save_config(cfg)
+    flash_t("ai_ok")
     return redirect(url_for("settings"))
 
 

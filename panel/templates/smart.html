@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="info-banner"><span>i</span><p>{{ t.smart_intro }}</p></section>
+
+<section class="panel smart-form-panel">
+  <header class="panel-header"><div><h2>{{ t.smart_title }}</h2><p>{{ t.smart_sub }}</p></div></header>
+  <form method="post" action="{{ url_for('smart_page') }}" class="smart-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>
+      <span>{{ t.smart_user }}</span>
+      <select name="user" required {% if not user_names %}disabled{% endif %}>
+        {% for name in user_names %}
+        <option value="{{ name }}" {% if form.user == name %}selected{% endif %}>{{ name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      <span>{{ t.smart_os }}</span>
+      <select name="os">
+        {% for opt in os_opts %}
+        <option value="{{ opt }}" {% if form.os == opt %}selected{% endif %}>{{ t['smart_os_' + opt] }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      <span>{{ t.smart_net }}</span>
+      <select name="net">
+        {% for opt in net_opts %}
+        <option value="{{ opt }}" {% if form.net == opt %}selected{% endif %}>{{ t['smart_net_' + opt] }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      <span>{{ t.smart_udp }}</span>
+      <select name="udp">
+        <option value="ok" {% if form.udp == 'ok' %}selected{% endif %}>{{ t.smart_udp_ok }}</option>
+        <option value="blocked" {% if form.udp == 'blocked' %}selected{% endif %}>{{ t.smart_udp_blocked }}</option>
+        <option value="unknown" {% if form.udp == 'unknown' %}selected{% endif %}>{{ t.smart_udp_unknown }}</option>
+      </select>
+    </label>
+    <label>
+      <span>{{ t.smart_path }}</span>
+      <select name="path">
+        <option value="extra_ok" {% if form.path == 'extra_ok' %}selected{% endif %}>{{ t.smart_path_extra }}</option>
+        <option value="only443" {% if form.path == 'only443' %}selected{% endif %}>{{ t.smart_path_only443 }}</option>
+        <option value="unknown" {% if form.path == 'unknown' %}selected{% endif %}>{{ t.smart_path_unknown }}</option>
+      </select>
+    </label>
+    <label class="check-label smart-native">
+      <input type="checkbox" name="native" value="1" {% if form.native %}checked{% endif %}>
+      <span>{{ t.smart_native }}</span>
+    </label>
+    <button class="primary-button" type="submit" {% if not user_names %}disabled{% endif %}>{{ t.smart_submit }}</button>
+  </form>
+  {% if not user_names %}<p class="muted">{{ t.smart_no_users }}</p>{% endif %}
+</section>
+
+{% if result %}
+{% set inv = result.inventory %}
+<section class="panel smart-inv-panel">
+  <header class="panel-header"><div><h2>{{ t.smart_inventory }}</h2><p>{{ t.smart_inventory_p }}</p></div></header>
+  <dl class="smart-inv">
+    <div><dt>{{ t.server }}</dt><dd><code class="copyable" title="{{ t.copy_title }}">{{ inv.domain or inv.public_ip or '—' }}</code></dd></div>
+    <div><dt>{{ t.smart_le }}</dt><dd>{{ t.smart_yes if inv.le_cert else t.smart_no }}</dd></div>
+    <div><dt>{{ t.smart_reality }}</dt><dd>{{ t.smart_yes if inv.reality_public else t.smart_no }}</dd></div>
+    <div><dt>{{ t.smart_ufw }}</dt><dd>{% if inv.ufw_active is none %}{{ t.smart_unk }}{% elif inv.ufw_active %}{{ t.smart_yes }}{% else %}{{ t.smart_no }}{% endif %}</dd></div>
+  </dl>
+  <p class="smart-flags muted">
+    {% for pid, on in inv.flags.items() %}<span class="protocol">{{ pid }}{% if not on %} · {{ t.smart_skipped }}{% endif %}</span>{% endfor %}
+  </p>
+  <p class="smart-ports" dir="ltr">
+    {% for k, v in inv.ports.items() %}{% if v %}<code>{{ k }} {{ v }}</code> {% endif %}{% endfor %}
+  </p>
+  <p class="smart-svc muted">{{ t.smart_svc }}:
+    {% for unit, st in inv.services.items() %}
+      <code dir="ltr">{{ unit }}={{ 'active' if st else ('off' if st == false else '?') }}</code>
+    {% endfor %}
+  </p>
+</section>
+
+{% if result.honest_443 %}
+<section class="info-banner"><span>!</span><p>{{ t.smart_honest_443 }}</p></section>
+{% endif %}
+
+<section class="smart-rank-list">
+  <header class="panel-header"><div><h2>{{ t.smart_results }}</h2></div></header>
+  {% if result.ranked %}
+  {% for row in result.ranked %}
+  <article class="smart-rank-card{% if row.rank == 1 %} is-first{% endif %}">
+    <span class="smart-badge">#{{ row.rank }}</span>
+    <div class="smart-rank-copy">
+      {% if row.rank == 1 %}<span class="recommended">{{ t.smart_pick }}</span>{% endif %}
+      <h2>{{ row.label }}</h2>
+      <p>{{ t.smart_score }}: <b dir="ltr">{{ row.score }}</b></p>
+      <p class="smart-reason">{{ row.reason }}</p>
+      {% if row.uri %}
+      <label><span>{{ t.smart_uri }}</span><input class="copyable" type="text" dir="ltr" readonly value="{{ row.uri }}" title="{{ t.copy_title }}"></label>
+      {% elif row.endpoint %}
+      <label><span>{{ t.smart_host_user }}</span><input class="copyable" type="text" dir="ltr" readonly value="{{ row.endpoint }}" title="{{ t.copy_title }}"></label>
+      {% endif %}
+      {% if row.client_url %}<p><a class="text-link" href="{{ row.client_url }}">{{ t.smart_open }}</a></p>{% endif %}
+    </div>
+  </article>
+  {% endfor %}
+  {% else %}
+  <p class="empty-state">{{ t.smart_no_match }}</p>
+  {% endif %}
+</section>
+
+{% if result.ai_text %}
+<section class="panel smart-ai-panel">
+  <header class="panel-header"><div><h2>{{ t.smart_ai_box }}</h2></div></header>
+  <p class="smart-ai-text">{{ result.ai_text }}</p>
+</section>
+{% endif %}
+{% endif %}
+{% endblock %}

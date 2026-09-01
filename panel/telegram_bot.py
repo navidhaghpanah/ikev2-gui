@@ -75,6 +75,7 @@ def main_menu():
         [
             [{"text": "👥 کاربران", "callback_data": "users:0"}],
             [{"text": "➕ افزودن کاربر", "callback_data": "add:start"}],
+            [{"text": "⚡ اتصال هوشمند", "callback_data": "smart"}],
             [{"text": "📊 وضعیت سرور", "callback_data": "status"}],
         ]
     )
@@ -189,6 +190,76 @@ def user_detail_kb(name, u):
         ]
     )
 
+
+
+
+
+def smart_users_kb():
+    users = panel.load_users()
+    names = sorted(users.keys())[:12]
+    rows = [[{"text": n, "callback_data": "smartu:%s" % n}] for n in names]
+    rows.append([{"text": "🔙 منو", "callback_data": "menu"}])
+    return names, kb(rows)
+
+
+def smart_os_kb(name):
+    rows = [
+        [
+            {"text": "Android", "callback_data": "smarto:%s:android" % name},
+            {"text": "iOS", "callback_data": "smarto:%s:ios" % name},
+        ],
+        [
+            {"text": "Windows", "callback_data": "smarto:%s:windows" % name},
+            {"text": "macOS", "callback_data": "smarto:%s:mac" % name},
+        ],
+        [
+            {"text": "Linux", "callback_data": "smarto:%s:linux" % name},
+            {"text": "Telegram", "callback_data": "smarto:%s:telegram" % name},
+        ],
+        [{"text": "🔙 منو", "callback_data": "menu"}],
+    ]
+    return kb(rows)
+
+
+def smart_udp_kb(name, os_):
+    return kb(
+        [
+            [
+                {"text": "UDP باز", "callback_data": "smartq:%s:%s:ok" % (name, os_)},
+                {"text": "UDP مسدود", "callback_data": "smartq:%s:%s:blocked" % (name, os_)},
+            ],
+            [{"text": "نمی‌دانم", "callback_data": "smartq:%s:%s:unknown" % (name, os_)}],
+            [{"text": "🔙 منو", "callback_data": "menu"}],
+        ]
+    )
+
+
+def handle_smart_pick(chat_id, message_id, name, os_, udp):
+    users = panel.load_users()
+    u = users.get(name)
+    if not u:
+        send(chat_id, "کاربر پیدا نشد.", main_menu(), message_id)
+        return
+    form = {"os": os_, "net": "unknown", "udp": udp, "path": "unknown", "native": False}
+    result = panel.rank_smart_connect(name, u, panel.load_config(), form, "fa")
+    ranked = result.get("ranked") or []
+    if not ranked:
+        text = "برای %s با OS=%s UDP=%s پروتکل مناسبی نماند." % (name, os_, udp)
+        send(chat_id, text, main_menu(), message_id)
+        return
+    top = ranked[0]
+    lines = [
+        "⚡ <b>اتصال هوشمند</b> — %s" % name,
+        "شرایط: OS=%s  UDP=%s  (موجودی سرور، نه پروب ISP)" % (os_, udp),
+        "",
+        "پیشنهاد: <b>%s</b> (امتیاز %s)" % (top["label"], top["score"]),
+        top.get("reason") or "",
+    ]
+    if top.get("uri"):
+        lines.append("URI:\n<code>%s</code>" % top["uri"])
+    elif top.get("endpoint"):
+        lines.append("میزبان / کاربر: <code>%s</code>" % top["endpoint"])
+    send(chat_id, "\n".join(lines), main_menu(), message_id)
 
 
 def apply_user_change(name, users):
@@ -472,6 +543,21 @@ def process_callback(cq):
             send(chat_id, "🤖 پنل مدیریت VPN", main_menu(), message_id)
         elif data == "status":
             send(chat_id, fmt_status(), main_menu(), message_id)
+        elif data == "smart":
+            names, markup = smart_users_kb()
+            if not names:
+                send(chat_id, "ابتدا یک کاربر بسازید.", main_menu(), message_id)
+            else:
+                send(chat_id, "کاربر را برای اتصال هوشمند انتخاب کنید:", markup, message_id)
+        elif data.startswith("smartu:"):
+            name = data.split(":", 1)[1]
+            send(chat_id, "سیستم‌عامل / کلاینت %s؟" % name, smart_os_kb(name), message_id)
+        elif data.startswith("smarto:"):
+            _, name, os_ = data.split(":", 2)
+            send(chat_id, "وضعیت UDP برای %s؟" % name, smart_udp_kb(name, os_), message_id)
+        elif data.startswith("smartq:"):
+            _, name, os_, udp = data.split(":", 3)
+            handle_smart_pick(chat_id, message_id, name, os_, udp)
         elif data.startswith("users:"):
             handle_users(chat_id, message_id, int(data.split(":", 1)[1]))
         elif data.startswith("user:"):
