@@ -88,6 +88,15 @@ for f in "${need[@]}"; do
   fi
 done
 
+if [[ "${EXTRA_ONLY:-}" == "1" ]]; then
+  echo
+  echo "=========================================="
+  echo "   extra protocols (xray / hysteria / mtg)"
+  echo "=========================================="
+  echo
+  # Skip domain/SSL/ipsec/nginx. Jump to binary+unit+ufw provisioning below.
+else
+
 echo
 echo "=========================================="
 echo "   IKEv2 GUI  —  installer"
@@ -427,6 +436,8 @@ fi
 ln -sfn /etc/nginx/sites-available/ikev2-l2tp-gui /etc/nginx/sites-enabled/ikev2-l2tp-gui
 rm -f /etc/nginx/sites-enabled/default
 
+fi  # EXTRA_ONLY skip of core IKEv2/nginx install
+
 # --- Shadowsocks / VLESS (xray-core) and Hysteria2 binaries + units ---------
 # The panel generates the config files for these from users.json and starts or
 # stops the services itself. The units carry ConditionPathExists so that an
@@ -446,14 +457,18 @@ if [[ -n "$XRAY_ASSET" ]]; then
   HY_URL="${HY_URL:-https://github.com/apernet/hysteria/releases/latest/download/${HY_ASSET}}"
 
   tmp_dl="$(mktemp -d)"
-  if curl -fsSL -o "$tmp_dl/xray.zip" "$XRAY_URL"; then
+  if [[ -x /opt/panel-xray/xray ]]; then
+    echo "xray-core ghablan nasb shode, skip download"
+  elif curl -fsSL -o "$tmp_dl/xray.zip" "$XRAY_URL"; then
     unzip -oq "$tmp_dl/xray.zip" xray -d /opt/panel-xray
     chmod 0755 /opt/panel-xray/xray
     echo "xray-core nasb shod"
   else
     echo "hoshdar: download xray-core nashod — Shadowsocks/VLESS kar nemikone" >&2
   fi
-  if curl -fsSL -o "$tmp_dl/hysteria" "$HY_URL"; then
+  if [[ -x /opt/panel-hysteria/hysteria ]]; then
+    echo "hysteria2 ghablan nasb shode, skip download"
+  elif curl -fsSL -o "$tmp_dl/hysteria" "$HY_URL"; then
     install -m 0755 "$tmp_dl/hysteria" /opt/panel-hysteria/hysteria
     echo "hysteria2 nasb shod"
   else
@@ -519,17 +534,94 @@ WantedBy=multi-user.target
 EOF
 fi
 
+# --- MTProto sidecar (mtg). Xray has no mtproto inbound (same as 3x-ui v3.3).
+# Hardcoded 9seconds/mtg v2.2.8 linux binaries (2026-04-07). Override with MTG_URL.
+case "$(uname -m)" in
+  x86_64)  MTG_ASSET="mtg-2.2.8-linux-amd64.tar.gz" ;;
+  aarch64) MTG_ASSET="mtg-2.2.8-linux-arm64.tar.gz" ;;
+  *) MTG_ASSET="" ;;
+esac
+if [[ -n "$MTG_ASSET" ]]; then
+  install -d /opt/panel-mtg /etc/panel-mtg
+  chmod 700 /etc/panel-mtg
+  if [[ ! -x /opt/panel-mtg/mtg ]]; then
+    MTG_URL="${MTG_URL:-https://github.com/9seconds/mtg/releases/download/v2.2.8/${MTG_ASSET}}"
+    tmp_mtg="$(mktemp -d)"
+    if curl -fsSL -o "$tmp_mtg/mtg.tar.gz" "$MTG_URL"; then
+      tar -xzf "$tmp_mtg/mtg.tar.gz" -C "$tmp_mtg"
+      mtg_bin="$(find "$tmp_mtg" -type f -name mtg | head -n1)"
+      if [[ -n "$mtg_bin" ]]; then
+        install -m 0755 "$mtg_bin" /opt/panel-mtg/mtg
+        echo "mtg nasb shod"
+      else
+        echo "hoshdar: binary mtg tu archive nist" >&2
+      fi
+    else
+      echo "hoshdar: download mtg nashod — MTProto kar nemikone" >&2
+    fi
+    rm -rf "$tmp_mtg"
+  fi
+  cat > /etc/systemd/system/panel-mtg.service << 'EOF'
+[Unit]
+Description=Panel MTProto (mtg)
+After=network.target
+ConditionPathExists=/etc/panel-mtg/mtg.toml
+
+[Service]
+Type=simple
+ExecStart=/opt/panel-mtg/mtg run /etc/panel-mtg/mtg.toml
+Restart=on-failure
+RestartSec=5
+User=root
+UMask=0077
+LimitNOFILE=65535
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=full
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+
+[Install]
+WantedBy=multi-user.target
+EOF
+fi
+
 # Open the extra protocol ports only when a firewall is actually managing them.
 if command -v ufw >/dev/null 2>&1 && ufw status 2>/dev/null | grep -q "Status: active"; then
-  ufw allow 8443/tcp  >/dev/null 2>&1 || true   # VLESS + TLS
+  ufw allow 8443/tcp  >/dev/null 2>&1 || true   # VLESS Reality
   ufw allow 443/udp   >/dev/null 2>&1 || true   # Hysteria2 (QUIC)
   ufw allow 8388:8888/tcp >/dev/null 2>&1 || true   # per-user Shadowsocks (ss_next_port starts at 8388)
   ufw allow 8388:8888/udp >/dev/null 2>&1 || true
+  ufw allow 2053/tcp  >/dev/null 2>&1 || true   # VMess WS+TLS
+  ufw allow 10809/tcp >/dev/null 2>&1 || true   # HTTP proxy
+  ufw allow 3128/tcp  >/dev/null 2>&1 || true   # MTProto (mtg)
+fi
+
+if [[ "${EXTRA_ONLY:-}" == "1" ]]; then
+  systemctl daemon-reload
+  if [[ -f /etc/systemd/system/panel-mtg.service ]]; then
+    systemctl enable panel-mtg >/dev/null || true
+  fi
+  if [[ -f /etc/systemd/system/panel-shadowsocks.service ]]; then
+    systemctl enable panel-shadowsocks >/dev/null || true
+  fi
+  if [[ -f /etc/systemd/system/panel-hysteria.service ]]; then
+    systemctl enable panel-hysteria >/dev/null || true
+  fi
+  echo "extra protocols OK (xl2tpd/nginx/panel dast nazadim)"
+  exit 0
 fi
 
 cp "$APP_DIR/ikev2-l2tp-gui.service" /etc/systemd/system/ikev2-l2tp-gui.service
 systemctl daemon-reload
 systemctl enable xl2tpd strongswan-starter ikev2-l2tp-gui nginx >/dev/null
+if [[ -f /etc/systemd/system/panel-mtg.service ]]; then
+  systemctl enable panel-mtg >/dev/null || true
+fi
 systemctl restart xl2tpd
 systemctl restart strongswan-starter
 systemctl restart ikev2-l2tp-gui
