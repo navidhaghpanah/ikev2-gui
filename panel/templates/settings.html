@@ -5,6 +5,16 @@
   <article class="panel settings-card"><header class="settings-heading"><span class="settings-icon green">DNS</span><div><h2>{{ t.card_dns }}</h2><p>{{ t.card_dns_p }}</p></div></header><form method="post" action="{{ url_for('settings_dns') }}" class="settings-form"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><label><span>{{ t.dns_addrs }}</span><input name="dns" dir="ltr" value="{{ dns }}" required><small>{{ t.dns_h }}</small></label><button class="secondary-button" type="submit">{{ t.save_dns }}</button></form></article>
   <article class="panel settings-card"><header class="settings-heading"><span class="settings-icon violet">P</span><div><h2>{{ t.card_profile }}</h2><p>{{ t.card_profile_p }}</p></div></header><form method="post" action="{{ url_for('settings_profile') }}" class="settings-form"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><label><span>{{ t.display_name }}</span><input name="display_name" dir="{{ content_dir }}" value="{{ profile_display_name }}" maxlength="64"></label><label><span>{{ t.contact }}</span><input name="contact" dir="ltr" value="{{ profile_contact }}" maxlength="128" placeholder="@telegram"></label><button class="secondary-button" type="submit">{{ t.save_profile }}</button></form></article>
   <article class="panel settings-card"><header class="settings-heading"><span class="settings-icon violet">●</span><div><h2>{{ t.card_admin }}</h2><p>{{ t.card_admin_p % {'user': admin_user} }}</p></div></header><form method="post" action="{{ url_for('settings_admin') }}" class="settings-form"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><label><span>{{ t.admin_pass }}</span><span class="password-field"><input name="password" type="password" dir="ltr" placeholder="{{ t.admin_pass_ph }}" required minlength="12" maxlength="128" autocomplete="new-password"><button type="button" class="password-toggle" aria-label="{{ t.show_pass }}">{{ t.show_pass }}</button></span><small>{{ t.admin_pass_h }}</small></label><button class="secondary-button" type="submit">{{ t.change_admin }}</button></form></article>
+  <article class="panel settings-card"><header class="settings-heading"><span class="settings-icon amber">2FA</span><div><h2>{{ t.card_totp }}</h2><p>{% if totp_on %}{{ t.card_totp_on }}{% else %}{{ t.card_totp_p }}{% endif %}</p></div></header>
+    {% if totp_on %}
+    <form method="post" action="{{ url_for('settings_totp_off') }}" class="settings-form" data-confirm="{{ t.totp_off_confirm }}" data-confirm-title="{{ t.card_totp }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><label><span>{{ t.login_totp }}</span><input name="totp" inputmode="numeric" maxlength="8" dir="ltr" autocomplete="one-time-code" required></label><button class="secondary-button" type="submit">{{ t.totp_off }}</button></form>
+    {% elif totp_otpauth %}
+    <div class="totp-setup"><canvas id="totp-qr" width="160" height="160" data-otpauth="{{ totp_otpauth }}"></canvas><p class="muted">{{ t.totp_scan }}</p><code class="copyable totp-secret" dir="ltr" title="{{ t.copy_title }}">{{ totp_secret }}</code>
+    <form method="post" action="{{ url_for('settings_totp_confirm') }}" class="settings-form"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><label><span>{{ t.totp_code }}</span><input name="totp" inputmode="numeric" maxlength="8" dir="ltr" autocomplete="one-time-code" required></label><button class="primary-button" type="submit">{{ t.totp_enable }}</button></form></div>
+    {% else %}
+    <form method="post" action="{{ url_for('settings_totp_start') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="primary-button" type="submit">{{ t.totp_add }}</button></form>
+    {% endif %}
+  </article>
   <article class="panel settings-card"><header class="settings-heading"><span class="settings-icon amber">KEY</span><div><h2>{{ t.card_psk }}</h2><p>{{ t.card_psk_p }}</p></div></header><form method="post" action="{{ url_for('settings_psk') }}" class="settings-form"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><label><span>{{ t.new_psk }}</span><span class="password-field"><input name="psk" type="password" dir="ltr" required minlength="16" maxlength="128" autocomplete="new-password"><button type="button" class="password-toggle" aria-label="{{ t.show_pass }}">{{ t.show_pass }}</button></span></label><button class="secondary-button" type="submit">{{ t.save_psk }}</button></form></article>
   <article class="panel settings-card"><header class="settings-heading"><span class="settings-icon blue">@</span><div><h2>{{ t.card_domain }}</h2><p>{{ t.card_domain_p }}</p></div></header><form method="post" action="{{ url_for('settings_domain') }}" class="settings-form"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><label><span>{{ t.domain_now }}</span><input name="domain" dir="ltr" value="{{ domain or host }}" required></label><button class="secondary-button" type="submit">{{ t.save_domain }}</button></form></article>
   <article class="panel settings-card"><header class="settings-heading"><span class="settings-icon green">↑</span><div><h2>{{ t.card_update }}</h2><p>{% if update_info is none %}{{ t.update_none }}{% elif update_info.behind %}{{ t.update_behind % {'n': update_info.behind} }}{% else %}{{ t.update_ok }}{% endif %}</p></div></header>
@@ -25,4 +35,16 @@
   </article>
 </section>
 <section class="panel server-details"><header class="panel-header"><div><h2>{{ t.conn_info }}</h2><p>{{ t.conn_info_p }}</p></div><a class="text-link" href="{{ url_for('clients_page') }}">{{ t.get_client }}</a></header><dl><div><dt>{{ t.conn_type }}</dt><dd>IKEv2 EAP</dd></div><div><dt>Server / Remote ID</dt><dd><code class="copyable" title="{{ t.copy_title }}">{{ host }}</code></dd></div><div><dt>{{ t.cert }}</dt><dd>None</dd></div><div><dt>{{ t.dns_now }}</dt><dd><code class="copyable" title="{{ t.copy_title }}">{{ dns }}</code></dd></div></dl></section>
+{% endblock %}
+{% block scripts %}
+{% if totp_otpauth %}
+<script src="{{ url_for('static', filename='qrious.min.js', v='20260901-icon') }}"></script>
+<script>
+(function () {
+  var el = document.getElementById('totp-qr');
+  if (!el || !window.QRious) return;
+  new QRious({ element: el, value: el.getAttribute('data-otpauth') || '', size: 160, background: '#f6f1e4', foreground: '#1a1408' });
+})();
+</script>
+{% endif %}
 {% endblock %}
