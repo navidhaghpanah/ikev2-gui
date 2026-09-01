@@ -4,8 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{ t.login_title }}</title>
+  <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" sizes="any">
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon-32.png') }}" sizes="32x32">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;800&display=swap">
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v='20260901-3xui') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v='20260901-icon') }}">
 </head>
 <body class="login-body" data-lang="{{ lang }}">
   <div class="login-toolbar">
@@ -21,7 +24,7 @@
   </div>
   <form class="login-card" method="post" dir="{{ content_dir }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <div class="mark">NH</div>
+    <div class="mark"><img src="{{ url_for('static', filename='logo.png') }}" alt="NH MultiVPN"></div>
     <h1>{{ t.login_h }}</h1>
     <p class="muted">{{ host or t.login_p }}</p>
     {% if err %}<div class="alert bad">{{ err }}</div>{% endif %}
@@ -29,9 +32,13 @@
     <input name="user" autocomplete="username" autofocus>
     <label>{{ t.login_pass }}</label>
     <input name="password" type="password" autocomplete="current-password">
+    {% if totp_on %}
+    <label>{{ t.login_totp }}</label>
+    <input name="totp" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="one-time-code" dir="ltr">
+    {% endif %}
     <button type="submit">{{ t.login_btn }}</button>
     <p class="authors-line">{{ t.authors }}</p>
   </form>
-  <script src="{{ url_for('static', filename='copy.js', v='20260901-3xui') }}" defer></script>
+  <script src="{{ url_for('static', filename='copy.js', v='20260901-icon') }}" defer></script>
 </body>
 </html>
