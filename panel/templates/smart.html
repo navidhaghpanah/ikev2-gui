@@ -46,6 +46,13 @@
         <option value="unknown" {% if form.path == 'unknown' %}selected{% endif %}>{{ t.smart_path_unknown }}</option>
       </select>
     </label>
+    <label>
+      <span>{{ t.smart_filter }}</span>
+      <select name="filter">
+        <option value="iran" {% if form.filter == 'iran' %}selected{% endif %}>{{ t.smart_filter_iran }}</option>
+        <option value="none" {% if form.filter == 'none' %}selected{% endif %}>{{ t.smart_filter_none }}</option>
+      </select>
+    </label>
     <label class="check-label smart-native">
       <input type="checkbox" name="native" value="1" {% if form.native %}checked{% endif %}>
       <span>{{ t.smart_native }}</span>
