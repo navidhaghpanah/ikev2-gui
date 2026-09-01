@@ -1,25 +1,36 @@
 <!doctype html>
-<html lang="fa" dir="rtl">
+<html lang="{{ lang }}" dir="ltr" data-theme="{{ theme }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>ورود — NH MultiVPN</title>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700;800&display=swap">
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v='20260901-glass') }}">
+  <title>{{ t.login_title }}</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;800&display=swap">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v='20260901-3xui') }}">
 </head>
-<body class="login-body">
-  <form class="login-card" method="post">
+<body class="login-body" data-lang="{{ lang }}" data-show-pass="{{ t.show_pass }}" data-hide-pass="{{ t.hide_pass }}">
+  <div class="login-toolbar">
+    <form method="post" action="{{ url_for('settings_theme') }}" class="icon-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="theme" value="{{ 'light' if theme == 'dark' else 'dark' }}">
+      <button class="ghost-button" type="submit">{% if theme == 'dark' %}☀{% else %}☾{% endif %}</button>
+    </form>
+    <div class="lang-switch">
+      <form method="post" action="{{ url_for('settings_lang') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="lang" value="fa"><button type="submit" class="{{ 'active' if lang == 'fa' else '' }}">FA</button></form>
+      <form method="post" action="{{ url_for('settings_lang') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="lang" value="en"><button type="submit" class="{{ 'active' if lang == 'en' else '' }}">EN</button></form>
+    </div>
+  </div>
+  <form class="login-card" method="post" dir="{{ content_dir }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="mark">NH</div>
-    <h1>ورود به NH MultiVPN</h1>
-    <p class="muted">{{ host or 'پنل مدیریت کاربران' }}</p>
+    <h1>{{ t.login_h }}</h1>
+    <p class="muted">{{ host or t.login_p }}</p>
     {% if err %}<div class="alert bad">{{ err }}</div>{% endif %}
-    <label>نام کاربری پنل</label>
+    <label>{{ t.login_user }}</label>
     <input name="user" autocomplete="username" autofocus>
-    <label>رمز عبور</label>
-    <span class="password-field"><input name="password" type="password" autocomplete="current-password"><button type="button" class="password-toggle" aria-label="نمایش رمز">نمایش</button></span>
-    <button type="submit">ورود</button>
+    <label>{{ t.login_pass }}</label>
+    <span class="password-field"><input name="password" type="password" autocomplete="current-password"><button type="button" class="password-toggle" aria-label="{{ t.show_pass }}">{{ t.show_pass }}</button></span>
+    <button type="submit">{{ t.login_btn }}</button>
   </form>
-  <script src="/static/copy.js?v=20260901-glass" defer></script>
+  <script src="{{ url_for('static', filename='copy.js', v='20260901-3xui') }}" defer></script>
 </body>
 </html>

@@ -3,6 +3,20 @@
 # Tunnel-haye IKEv2/L2TP ro update nemikosh-e (faghat service-e panel).
 set -euo pipefail
 
+if [[ -t 1 ]]; then
+  C_HDR=$'\033[1;33m'
+  C_OK=$'\033[0;32m'
+  C_ERR=$'\033[1;31m'
+  C_DIM=$'\033[2m'
+  C_RST=$'\033[0m'
+else
+  C_HDR=; C_OK=; C_ERR=; C_DIM=; C_RST=
+fi
+hdr() { printf '%s%s%s\n' "$C_HDR" "$*" "$C_RST"; }
+ok() { printf '%s%s%s\n' "$C_OK" "$*" "$C_RST"; }
+err() { printf '%s%s%s\n' "$C_ERR" "$*" "$C_RST" >&2; }
+hint() { printf '%s%s%s\n' "$C_DIM" "$*" "$C_RST"; }
+
 APP_DIR="${APP_DIR:-/opt/ikev2-l2tp-gui}"
 CFG_DIR="${CFG_DIR:-/etc/ikev2-l2tp-gui}"
 DATA_DIR="${DATA_DIR:-/var/lib/ikev2-l2tp-gui}"
@@ -11,7 +25,7 @@ REPO_URL="${REPO_URL:-https://github.com/navidhaghpanah/multivpn-panel.git}"
 PANEL_UNIT="${PANEL_UNIT:-ikev2-l2tp-gui}"
 CLI_BIN="/usr/local/bin/multivpn"
 
-die() { echo "$*" >&2; exit 1; }
+die() { err "$*"; exit 1; }
 need_root() {
   if [[ ${EUID:-$(id -u)} -ne 0 ]]; then
     die "ba root: sudo multivpn $*"
@@ -41,14 +55,14 @@ cmd_install_cli() {
   local src
   src="$(readlink -f "${BASH_SOURCE[0]}")"
   install -m 0755 "$src" "$CLI_BIN"
-  echo "OK: $CLI_BIN"
-  echo "az har ja: sudo multivpn update"
+  ok "OK: $CLI_BIN"
+  hint "az har ja: sudo multivpn update"
 }
 
 ensure_repo() {
   local branch="$1"
   if [[ ! -d "$REPO_DIR/.git" ]]; then
-    echo "clone $REPO_URL -> $REPO_DIR ($branch)"
+    hint "clone $REPO_URL -> $REPO_DIR ($branch)"
     git clone --branch "$branch" "$REPO_URL" "$REPO_DIR"
   fi
   cd "$REPO_DIR"
@@ -69,7 +83,7 @@ cmd_update() {
   ensure_repo "$branch"
 
   if [[ -f "$REPO_DIR/scripts/deploy.sh" ]]; then
-    echo "update ba scripts/deploy.sh $branch"
+    hdr "update ba scripts/deploy.sh $branch"
     bash "$REPO_DIR/scripts/deploy.sh" "$branch"
     return
   fi
@@ -87,13 +101,13 @@ cmd_update() {
   fi
   # mtg binary + ufw 2053/10809/3128 + systemd units. Does not restart xl2tpd/nginx.
   if [[ -f "$REPO_DIR/install.sh" ]]; then
-    echo "extra protocols: EXTRA_ONLY=1 bash install.sh"
+    hint "extra protocols: EXTRA_ONLY=1 bash install.sh"
     EXTRA_ONLY=1 bash "$REPO_DIR/install.sh"
   fi
   systemctl restart "$PANEL_UNIT"
   sleep 1
   if systemctl is-active --quiet "$PANEL_UNIT"; then
-    echo "panel restarted OK ($branch)"
+    ok "panel restarted OK ($branch)"
   else
     die "panel start nashod. journalctl -u $PANEL_UNIT -n 50"
   fi
@@ -126,28 +140,36 @@ cmd_uninstall() {
     rm -rf "$APP_DIR"
     systemctl restart nginx 2>/dev/null || true
     systemctl daemon-reload
-    echo "Panel hazf shod. Data: $CFG_DIR va $DATA_DIR mond."
+    ok "Panel hazf shod. Data: $CFG_DIR va $DATA_DIR mond."
   fi
   # protocol-haye extra age PR #4 / SS / Hysteria nasb shode
   systemctl disable --now panel-shadowsocks panel-hysteria panel-mtg 2>/dev/null || true
   rm -f "$CLI_BIN"
-  echo "CLI ham az $CLI_BIN hazf shod."
+  hint "CLI ham az $CLI_BIN hazf shod."
 }
 
 cmd_restart() {
   need_root "restart"
   systemctl restart "$PANEL_UNIT"
   systemctl is-active --quiet "$PANEL_UNIT" || die "panel start nashod"
-  echo "panel restart OK"
+  ok "panel restart OK"
 }
 
 cmd_status() {
   echo "APP_DIR=$APP_DIR"
   echo "REPO_DIR=$REPO_DIR"
   echo
+  hdr "service status"
   for u in "$PANEL_UNIT" nginx strongswan-starter xl2tpd panel-shadowsocks panel-hysteria panel-mtg; do
     if systemctl list-unit-files "$u.service" >/dev/null 2>&1; then
-      printf '%-22s %s\n' "$u" "$(systemctl is-active "$u" 2>/dev/null || echo n/a)"
+      st="$(systemctl is-active "$u" 2>/dev/null || echo n/a)"
+      if [[ "$st" == "active" ]]; then
+        printf '%-22s %s%s%s\n' "$u" "$C_OK" "$st" "$C_RST"
+      elif [[ "$st" == "inactive" || "$st" == "failed" ]]; then
+        printf '%-22s %s%s%s\n' "$u" "$C_ERR" "$st" "$C_RST"
+      else
+        printf '%-22s %s%s%s\n' "$u" "$C_DIM" "$st" "$C_RST"
+      fi
     fi
   done
   if [[ -d "$REPO_DIR/.git" ]]; then

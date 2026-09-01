@@ -1,6 +1,14 @@
 'use strict';
 
-const fa = value => String(value).replace(/\d/g, digit => '۰۱۲۳۴۵۶۷۸۹'[digit]);
+const LANG = document.documentElement.lang || 'fa';
+const faDigits = value => String(value).replace(/\d/g, digit => '۰۱۲۳۴۵۶۷۸۹'[digit]);
+const fmt = value => (LANG === 'fa' ? faDigits(value) : String(value));
+const pct = value => (LANG === 'fa' ? `${fmt(value)}٪` : `${fmt(value)}%`);
+
+function setText(id, value) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = value;
+}
 
 function renderOnline(container, names) {
   if (!container) return;
@@ -8,7 +16,7 @@ function renderOnline(container, names) {
   if (!names.length) {
     const empty = document.createElement('div');
     empty.className = 'empty-state compact';
-    empty.textContent = 'کسی آنلاین نیست.';
+    empty.textContent = document.body.getAttribute('data-nobody') || (LANG === 'fa' ? 'کسی آنلاین نیست.' : 'Nobody is online.');
     container.append(empty);
     return;
   }
@@ -28,28 +36,32 @@ async function refreshDashboard() {
     const response = await fetch('/api/status', {credentials: 'same-origin'});
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
-    document.getElementById('stat-online').textContent = fa(data.online_count);
-    document.getElementById('stat-sessions').textContent = fa(data.sessions.length);
-    document.getElementById('stat-cpu').textContent = `${fa(data.cpu)}٪`;
-    document.getElementById('stat-ram').textContent = `${fa(data.mem_pct)}٪`;
-    document.getElementById('bar-cpu').style.width = `${data.cpu}%`;
-    document.getElementById('bar-ram').style.width = `${data.mem_pct}%`;
-    document.getElementById('clock').textContent = data.now_fa;
-    document.getElementById('net-down-speed').textContent = data.net_down_h;
-    document.getElementById('net-up-speed').textContent = data.net_up_h;
-    document.getElementById('net-rx-total').textContent = data.net_rx_h;
-    document.getElementById('net-tx-total').textContent = data.net_tx_h;
+    setText('stat-online', fmt(data.online_count));
+    setText('stat-sessions', fmt(data.sessions.length));
+    setText('stat-cpu', pct(data.cpu));
+    setText('stat-ram', pct(data.mem_pct));
+    setText('top-cpu', pct(data.cpu));
+    setText('top-ram', pct(data.mem_pct));
+    const barCpu = document.getElementById('bar-cpu');
+    const barRam = document.getElementById('bar-ram');
+    if (barCpu) barCpu.style.width = `${data.cpu}%`;
+    if (barRam) barRam.style.width = `${data.mem_pct}%`;
+    setText('clock', LANG === 'fa' ? data.now_fa : (data.now || data.now_fa));
+    setText('net-down-speed', data.net_down_h);
+    setText('net-up-speed', data.net_up_h);
+    setText('net-rx-total', data.net_rx_h);
+    setText('net-tx-total', data.net_tx_h);
     renderOnline(document.getElementById('online-list'), data.online);
     if (liveBadge) {
       liveBadge.classList.remove('stale');
-      liveBadge.innerHTML = '<i></i> سرویس آنلاین';
+      liveBadge.innerHTML = '<i></i> ' + (document.body.getAttribute('data-live') || 'online');
       liveBadge.title = '';
     }
   } catch (_) {
     if (liveBadge) {
       liveBadge.classList.add('stale');
-      liveBadge.innerHTML = '<i></i> اطلاعات قدیمی';
-      liveBadge.title = 'دریافت اطلاعات تازه ناموفق بود؛ آخرین اطلاعات موفق نمایش داده می‌شود.';
+      liveBadge.innerHTML = '<i></i> ' + (document.body.getAttribute('data-stale') || 'stale');
+      liveBadge.title = '';
     }
   }
 }

@@ -1,50 +1,63 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="summary-strip"><div><span>کل حساب‌ها</span><b>{{ total }}</b></div><div><span>آنلاین</span><b class="success-text">{{ online_count }}</b></div><div><span>آفلاین</span><b>{{ total - online_count }}</b></div><div><span>نشست مجاز هر کاربر</span><b>{{ max_sessions_per_user }}</b></div></section>
+<section class="summary-strip"><div><span>{{ t.all_accounts }}</span><b>{{ total }}</b></div><div><span>{{ t.online }}</span><b class="success-text">{{ online_count }}</b></div><div><span>{{ t.offline }}</span><b>{{ total - online_count }}</b></div><div><span>{{ t.max_per_user }}</span><b>{{ max_sessions_per_user }}</b></div></section>
 <section id="add-user" class="panel">
-  <header class="panel-header"><div><h2>افزودن کاربر جدید</h2><p>برای کاربر نام، رمز و در صورت نیاز محدودیت تعیین کنید.</p></div></header>
+  <header class="panel-header"><div><h2>{{ t.add_user }}</h2><p>{{ t.add_user_p }}</p></div></header>
   <form method="post" action="{{ url_for('users_add') }}" class="form-grid add-user-form">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <label><span>نام کاربری</span><input name="name" dir="ltr" placeholder="example_user" required autocomplete="off"></label>
-    <label><span>رمز عبور</span><input name="password" type="password" dir="ltr" placeholder="حداقل ۱۲ نویسه" required minlength="12" maxlength="64" autocomplete="new-password"></label>
-    <label><span>تاریخ انقضا</span><input name="expires" type="date"><small>خالی یعنی بدون انقضا</small></label>
-    <label><span>حجم (GB)</span><input name="quota_gb" type="number" min="0" step="0.1" value="0"><small>صفر یعنی نامحدود</small></label>
-    <label class="check-label"><input type="checkbox" name="ss_enabled" value="1"><span>Shadowsocks</span></label>
-    <label class="check-label"><input type="checkbox" name="hy_enabled" value="1"><span>Hysteria2</span></label>
-    <label class="check-label"><input type="checkbox" name="vless_enabled" value="1"><span>VLESS</span></label>
-    <label class="check-label"><input type="checkbox" name="vmess_enabled" value="1"><span>VMess</span></label>
-    <label class="check-label"><input type="checkbox" name="http_enabled" value="1"><span>HTTP</span></label>
-    <label class="check-label"><input type="checkbox" name="mtg_enabled" value="1"><span>MTProto</span></label>
-    <button class="primary-button" type="submit">+ ساخت کاربر</button>
+    <label><span>{{ t.username }}</span><input name="name" dir="ltr" placeholder="example_user" required autocomplete="off"></label>
+    <label><span>{{ t.password }}</span><span class="password-field"><input name="password" type="password" dir="ltr" placeholder="{{ t.pass_ph }}" required minlength="1" maxlength="128" autocomplete="new-password"><button type="button" class="password-toggle" aria-label="{{ t.show_pass }}">{{ t.show_pass }}</button></span></label>
+    <label><span>{{ t.expires }}</span><input name="expires" type="date"><small>{{ t.expires_hint }}</small></label>
+    <label><span>{{ t.quota }}</span><input name="quota_gb" type="number" min="0" step="0.1" value="0"><small>{{ t.quota_hint }}</small></label>
+    <fieldset class="protocol-fieldset add-proto-fieldset"><legend>{{ t.active_protos }}</legend>
+      <label class="check-label"><input type="checkbox" name="ikev2_enabled" value="1" checked><span>IKEv2</span></label>
+      <label class="check-label"><input type="checkbox" name="l2tp_enabled" value="1" checked><span>L2TP</span></label>
+      <label class="check-label"><input type="checkbox" name="ss_enabled" value="1"><span>Shadowsocks</span></label>
+      <label class="check-label"><input type="checkbox" name="hy_enabled" value="1"><span>Hysteria2</span></label>
+      <label class="check-label"><input type="checkbox" name="vless_enabled" value="1"><span>VLESS</span></label>
+      <label class="check-label"><input type="checkbox" name="vmess_enabled" value="1"><span>VMess</span></label>
+      <label class="check-label"><input type="checkbox" name="http_enabled" value="1"><span>HTTP</span></label>
+      <label class="check-label"><input type="checkbox" name="mtg_enabled" value="1"><span>MTProto</span></label>
+    </fieldset>
+    <button class="primary-button" type="submit">{{ t.create_user }}</button>
   </form>
 </section>
 <section class="panel">
-  <header class="panel-header"><div><h2>فهرست کاربران</h2><p>ویرایش حجم، تاریخ و رمز بدون نمایش رمز فعلی</p></div><span class="count-badge">{{ total }} کاربر</span></header>
+  <header class="panel-header"><div><h2>{{ t.user_list }}</h2><p>{{ t.user_list_p }}</p></div><span class="count-badge">{{ t.n_users % {'n': total} }}</span></header>
   <div class="table-wrap flush"><table class="users-table">
-    <thead><tr><th>کاربر</th><th>وضعیت</th><th>انقضا</th><th>مصرف / سهمیه</th><th>ویرایش حساب</th><th></th></tr></thead>
+    <thead><tr><th>{{ t.col_user }}</th><th>{{ t.col_status }}</th><th>{{ t.col_expires }}</th><th>{{ t.col_quota }}</th><th>{{ t.col_edit }}</th><th></th></tr></thead>
     <tbody>{% for u in users %}<tr>
-      <td><div class="user-cell"><span class="mini-avatar">{{ u.name[:1]|upper }}</span><span><strong>{{ u.name }}</strong><small>ایجاد: {{ u.created or '—' }}</small>
-        <div class="proto-links"><span class="proto-badge">IKEv2</span><span class="proto-badge">L2TP</span>{% if u.ss_enabled %}<a class="proto-badge" href="{{ url_for('clients_ss', name=u.name) }}">SS</a>{% endif %}{% if u.hy_enabled %}<a class="proto-badge" href="{{ url_for('clients_hysteria', name=u.name) }}">Hysteria2</a>{% endif %}{% if u.vless_enabled %}<a class="proto-badge" href="{{ url_for('clients_vless', name=u.name) }}">VLESS</a>{% endif %}{% if u.vmess_enabled %}<a class="proto-badge" href="{{ url_for('clients_vmess', name=u.name) }}">VMess</a>{% endif %}{% if u.http_enabled %}<a class="proto-badge" href="{{ url_for('clients_http', name=u.name) }}">HTTP</a>{% endif %}{% if u.mtg_enabled %}<a class="proto-badge" href="{{ url_for('clients_mtg', name=u.name) }}">MTProto</a>{% endif %}{% if u.ss_enabled or u.hy_enabled or u.vless_enabled or u.vmess_enabled or u.http_enabled or u.mtg_enabled %}<a class="proto-badge" href="{{ url_for('clients_sub', name=u.name) }}">Sub</a>{% endif %}</div>
+      <td><div class="user-cell"><span class="mini-avatar">{{ u.name[:1]|upper }}</span><span><strong>{{ u.name }}</strong><small>{{ t.created }}: {{ u.created or '—' }}</small>
+        <div class="proto-links">{% if u.ikev2_enabled %}<span class="proto-badge">IKEv2</span>{% endif %}{% if u.l2tp_enabled %}<span class="proto-badge">L2TP</span>{% endif %}{% if u.ss_enabled %}<a class="proto-badge" href="{{ url_for('clients_ss', name=u.name) }}">SS</a>{% endif %}{% if u.hy_enabled %}<a class="proto-badge" href="{{ url_for('clients_hysteria', name=u.name) }}">Hysteria2</a>{% endif %}{% if u.vless_enabled %}<a class="proto-badge" href="{{ url_for('clients_vless', name=u.name) }}">VLESS</a>{% endif %}{% if u.vmess_enabled %}<a class="proto-badge" href="{{ url_for('clients_vmess', name=u.name) }}">VMess</a>{% endif %}{% if u.http_enabled %}<a class="proto-badge" href="{{ url_for('clients_http', name=u.name) }}">HTTP</a>{% endif %}{% if u.mtg_enabled %}<a class="proto-badge" href="{{ url_for('clients_mtg', name=u.name) }}">MTProto</a>{% endif %}{% if u.ss_enabled or u.hy_enabled or u.vless_enabled or u.vmess_enabled or u.http_enabled or u.mtg_enabled %}<a class="proto-badge" href="{{ url_for('clients_sub', name=u.name) }}">Sub</a>{% endif %}</div>
       </span></div></td>
-      <td>{% if u.block %}<span class="status-label danger"><i></i>{{ u.block }}</span>{% elif u.online %}<span class="status-label success"><i></i>آنلاین</span>{% else %}<span class="status-label neutral"><i></i>آفلاین</span>{% endif %}</td>
-      <td>{{ u.expires or 'نامحدود' }}</td><td><strong>{{ u.used_h }}</strong><small class="cell-note">از {{ u.quota_h }}</small></td>
-      <td><button class="secondary-button small edit-user-button" type="button" data-user="{{ u.name|e }}" data-expires="{{ u.expires|e }}" data-quota="{{ u.quota_gb }}" data-ss="{{ '1' if u.ss_enabled else '0' }}" data-hy="{{ '1' if u.hy_enabled else '0' }}" data-vless="{{ '1' if u.vless_enabled else '0' }}" data-vmess="{{ '1' if u.vmess_enabled else '0' }}" data-http="{{ '1' if u.http_enabled else '0' }}" data-mtg="{{ '1' if u.mtg_enabled else '0' }}">ویرایش حساب</button></td>
-      <td><form method="post" action="{{ url_for('users_delete') }}" data-confirm="حساب {{ u.name|e }} حذف شود؟ این عملیات قابل بازگشت نیست." data-confirm-title="حذف کاربر"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="name" value="{{ u.name }}"><button class="icon-button danger" type="submit" title="حذف {{ u.name }}" aria-label="حذف {{ u.name }}">×</button></form></td>
-    </tr>{% else %}<tr><td colspan="6"><div class="empty-state">هنوز کاربری ساخته نشده است.</div></td></tr>{% endfor %}</tbody>
+      <td>{% if u.block %}<span class="status-label danger"><i></i>{{ u.block }}</span>{% elif u.online %}<span class="status-label success"><i></i>{{ t.online }}</span>{% else %}<span class="status-label neutral"><i></i>{{ t.offline }}</span>{% endif %}</td>
+      <td>{{ u.expires or t.unlimited }}</td><td><strong>{{ u.used_h }}</strong><small class="cell-note">{{ t.of }} {{ u.quota_h }}</small></td>
+      <td><button class="secondary-button small edit-user-button" type="button" data-user="{{ u.name|e }}" data-expires="{{ u.expires|e }}" data-quota="{{ u.quota_gb }}" data-ikev2="{{ '1' if u.ikev2_enabled else '0' }}" data-l2tp="{{ '1' if u.l2tp_enabled else '0' }}" data-ss="{{ '1' if u.ss_enabled else '0' }}" data-hy="{{ '1' if u.hy_enabled else '0' }}" data-vless="{{ '1' if u.vless_enabled else '0' }}" data-vmess="{{ '1' if u.vmess_enabled else '0' }}" data-http="{{ '1' if u.http_enabled else '0' }}" data-mtg="{{ '1' if u.mtg_enabled else '0' }}">{{ t.edit_account }}</button></td>
+      <td><form method="post" action="{{ url_for('users_delete') }}" data-confirm="{{ t.delete_user_q % {'name': u.name} }}" data-confirm-title="{{ t.delete_user }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="name" value="{{ u.name }}"><button class="icon-button danger" type="submit" title="{{ t.delete_user_aria % {'name': u.name} }}" aria-label="{{ t.delete_user_aria % {'name': u.name} }}">×</button></form></td>
+    </tr>{% else %}<tr><td colspan="6"><div class="empty-state">{{ t.no_users }}</div></td></tr>{% endfor %}</tbody>
   </table></div>
 </section>
 <dialog class="app-dialog" id="edit-user-dialog" aria-labelledby="edit-user-title">
   <form method="post" action="{{ url_for('users_update') }}" class="dialog-card edit-user-dialog-form">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="name" id="edit-user-name">
-    <header class="dialog-header"><div><h2 id="edit-user-title">ویرایش حساب</h2><p>تنظیمات حساب <strong id="edit-user-label"></strong></p></div><button class="dialog-close" type="button" data-dialog-close aria-label="بستن">×</button></header>
+    <header class="dialog-header"><div><h2 id="edit-user-title">{{ t.edit_account }}</h2><p>{{ t.edit_account_p }} <strong id="edit-user-label"></strong></p></div><button class="dialog-close" type="button" data-dialog-close aria-label="{{ t.close }}">×</button></header>
     <div class="dialog-form-grid">
-      <label><span>رمز جدید</span><span class="password-field"><input name="password" type="password" dir="ltr" placeholder="برای حفظ رمز خالی بگذارید" autocomplete="new-password"><button type="button" class="password-toggle" aria-label="نمایش رمز">نمایش</button></span></label>
-      <label><span>تاریخ انقضا</span><input id="edit-user-expires" name="expires" type="date"></label>
-      <label><span>حجم (GB)</span><input id="edit-user-quota" name="quota_gb" type="number" min="0" step="0.1"><small>صفر یعنی نامحدود</small></label>
+      <label><span>{{ t.new_pass }}</span><span class="password-field"><input name="password" type="password" dir="ltr" placeholder="{{ t.keep_pass }}" maxlength="128" autocomplete="new-password"><button type="button" class="password-toggle" aria-label="{{ t.show_pass }}">{{ t.show_pass }}</button></span></label>
+      <label><span>{{ t.expires }}</span><input id="edit-user-expires" name="expires" type="date"></label>
+      <label><span>{{ t.quota }}</span><input id="edit-user-quota" name="quota_gb" type="number" min="0" step="0.1"><small>{{ t.quota_hint }}</small></label>
     </div>
-    <fieldset class="protocol-fieldset"><legend>پروتکل‌های فعال</legend><span class="proto-badge">IKEv2</span><span class="proto-badge">L2TP</span> <label class="check-label"><input id="edit-user-ss" type="checkbox" name="ss_enabled" value="1"><span>Shadowsocks</span></label><label class="check-label"><input id="edit-user-hy" type="checkbox" name="hy_enabled" value="1"><span>Hysteria2</span></label><label class="check-label"><input id="edit-user-vless" type="checkbox" name="vless_enabled" value="1"><span>VLESS</span></label><label class="check-label"><input id="edit-user-vmess" type="checkbox" name="vmess_enabled" value="1"><span>VMess</span></label><label class="check-label"><input id="edit-user-http" type="checkbox" name="http_enabled" value="1"><span>HTTP</span></label><label class="check-label"><input id="edit-user-mtg" type="checkbox" name="mtg_enabled" value="1"><span>MTProto</span></label></fieldset>
-    <label class="check-label reset-check"><input type="checkbox" name="reset_traffic" value="1"><span>مصرف ترافیک این کاربر صفر شود</span></label>
-    <div class="dialog-actions"><button class="secondary-button" type="button" data-dialog-close>انصراف</button><button class="primary-button" type="submit">ذخیره تغییرات</button></div>
+    <fieldset class="protocol-fieldset"><legend>{{ t.active_protos }}</legend>
+      <label class="check-label"><input id="edit-user-ikev2" type="checkbox" name="ikev2_enabled" value="1"><span>IKEv2</span></label>
+      <label class="check-label"><input id="edit-user-l2tp" type="checkbox" name="l2tp_enabled" value="1"><span>L2TP</span></label>
+      <label class="check-label"><input id="edit-user-ss" type="checkbox" name="ss_enabled" value="1"><span>Shadowsocks</span></label>
+      <label class="check-label"><input id="edit-user-hy" type="checkbox" name="hy_enabled" value="1"><span>Hysteria2</span></label>
+      <label class="check-label"><input id="edit-user-vless" type="checkbox" name="vless_enabled" value="1"><span>VLESS</span></label>
+      <label class="check-label"><input id="edit-user-vmess" type="checkbox" name="vmess_enabled" value="1"><span>VMess</span></label>
+      <label class="check-label"><input id="edit-user-http" type="checkbox" name="http_enabled" value="1"><span>HTTP</span></label>
+      <label class="check-label"><input id="edit-user-mtg" type="checkbox" name="mtg_enabled" value="1"><span>MTProto</span></label>
+    </fieldset>
+    <label class="check-label reset-check"><input type="checkbox" name="reset_traffic" value="1"><span>{{ t.reset_traffic }}</span></label>
+    <div class="dialog-actions"><button class="secondary-button" type="button" data-dialog-close>{{ t.cancel }}</button><button class="primary-button" type="submit">{{ t.save }}</button></div>
   </form>
 </dialog>
 {% endblock %}

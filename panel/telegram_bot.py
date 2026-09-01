@@ -123,40 +123,72 @@ def users_page(page=0, per_page=8):
     return text, kb(rows)
 
 
+
 def fmt_user_detail(name, u):
     block = panel.user_blocked(u)
     status = ("مسدود: " + block) if block else "فعال"
     q = float(u.get("quota_gb") or 0)
     used = float(u.get("used_bytes") or 0)
     quota_h = "نامحدود" if q <= 0 else "%.1f GB" % q
+
+    def on(key, default=False):
+        if key in ("ikev2_enabled", "l2tp_enabled"):
+            return panel.flag_on(u, key, True)
+        return bool(u.get(key))
+
     lines = [
         "👤 <b>%s</b>" % name,
         "وضعیت: %s" % status,
         "انقضا: %s" % (u.get("expires") or "نامحدود"),
         "مصرف: %s از %s" % (panel.human(used), quota_h),
+        "IKEv2: %s" % ("فعال" if on("ikev2_enabled") else "غیرفعال"),
+        "L2TP: %s" % ("فعال" if on("l2tp_enabled") else "غیرفعال"),
         "Shadowsocks: %s" % ("فعال (پورت %s)" % u.get("ss_port") if u.get("ss_enabled") else "غیرفعال"),
         "Hysteria2: %s" % ("فعال" if u.get("hy_enabled") else "غیرفعال"),
         "VLESS: %s" % ("فعال" if u.get("vless_enabled") else "غیرفعال"),
+        "VMess: %s" % ("فعال" if u.get("vmess_enabled") else "غیرفعال"),
+        "HTTP: %s" % ("فعال" if u.get("http_enabled") else "غیرفعال"),
+        "MTProto: %s" % ("فعال" if u.get("mtg_enabled") else "غیرفعال"),
     ]
     return "\n".join(lines)
 
 
+
 def user_detail_kb(name, u):
-    ss_label = "🔴 خاموش‌کردن SS" if u.get("ss_enabled") else "🟢 روشن‌کردن SS"
-    hy_label = "🔴 خاموش‌کردن Hysteria2" if u.get("hy_enabled") else "🟢 روشن‌کردن Hysteria2"
-    vless_label = "🔴 خاموش‌کردن VLESS" if u.get("vless_enabled") else "🟢 روشن‌کردن VLESS"
-    en_label = "⛔ غیرفعال‌کردن" if u.get("enabled", True) else "✅ فعال‌کردن"
+    def lab(key, label, default=False):
+        if key in ("ikev2_enabled", "l2tp_enabled"):
+            on = panel.flag_on(u, key, True)
+        else:
+            on = bool(u.get(key)) if key != "enabled" else u.get("enabled", True)
+        if key == "enabled":
+            return "⛔ غیرفعال‌کردن" if on else "✅ فعال‌کردن"
+        return ("🔴 خاموش‌کردن " if on else "🟢 روشن‌کردن ") + label
+
     return kb(
         [
             [{"text": "🔄 صفرکردن مصرف", "callback_data": "reset:%s" % name}],
-            [{"text": ss_label, "callback_data": "toggle:%s:ss" % name}],
-            [{"text": hy_label, "callback_data": "toggle:%s:hy" % name}],
-            [{"text": vless_label, "callback_data": "toggle:%s:vless" % name}],
-            [{"text": en_label, "callback_data": "toggle:%s:enabled" % name}],
+            [
+                {"text": lab("ikev2_enabled", "IKEv2"), "callback_data": "toggle:%s:ikev2" % name},
+                {"text": lab("l2tp_enabled", "L2TP"), "callback_data": "toggle:%s:l2tp" % name},
+            ],
+            [
+                {"text": lab("ss_enabled", "SS"), "callback_data": "toggle:%s:ss" % name},
+                {"text": lab("hy_enabled", "Hysteria2"), "callback_data": "toggle:%s:hy" % name},
+            ],
+            [
+                {"text": lab("vless_enabled", "VLESS"), "callback_data": "toggle:%s:vless" % name},
+                {"text": lab("vmess_enabled", "VMess"), "callback_data": "toggle:%s:vmess" % name},
+            ],
+            [
+                {"text": lab("http_enabled", "HTTP"), "callback_data": "toggle:%s:http" % name},
+                {"text": lab("mtg_enabled", "MTProto"), "callback_data": "toggle:%s:mtg" % name},
+            ],
+            [{"text": lab("enabled", "", True), "callback_data": "toggle:%s:enabled" % name}],
             [{"text": "❌ حذف کاربر", "callback_data": "del:%s:ask" % name}],
             [{"text": "🔙 لیست کاربران", "callback_data": "users:0"}],
         ]
     )
+
 
 
 def apply_user_change(name, users):
@@ -165,6 +197,7 @@ def apply_user_change(name, users):
         panel.write_secrets(users)
         panel.write_xray_ss_config(users)
         panel.write_hysteria_config(users)
+        panel.write_mtg_config(users)
 
 
 def handle_users(chat_id, message_id, page):
@@ -179,6 +212,7 @@ def handle_user_detail(chat_id, message_id, name):
         send(chat_id, "کاربر پیدا نشد.", main_menu(), message_id)
         return
     send(chat_id, fmt_user_detail(name, u), user_detail_kb(name, u), message_id)
+
 
 
 def handle_toggle(chat_id, message_id, name, field):
@@ -199,6 +233,18 @@ def handle_toggle(chat_id, message_id, name, field):
         u["vless_enabled"] = not u.get("vless_enabled")
         if u["vless_enabled"] and not u.get("vless_uuid"):
             u["vless_uuid"] = panel.new_vless_uuid()
+    elif field == "vmess":
+        u["vmess_enabled"] = not u.get("vmess_enabled")
+        if u["vmess_enabled"] and not u.get("vmess_uuid"):
+            u["vmess_uuid"] = panel.new_vmess_uuid()
+    elif field == "http":
+        u["http_enabled"] = not u.get("http_enabled")
+    elif field == "mtg":
+        u["mtg_enabled"] = not u.get("mtg_enabled")
+    elif field == "ikev2":
+        u["ikev2_enabled"] = not panel.flag_on(u, "ikev2_enabled", True)
+    elif field == "l2tp":
+        u["l2tp_enabled"] = not panel.flag_on(u, "l2tp_enabled", True)
     elif field == "enabled":
         u["enabled"] = not u.get("enabled", True)
     apply_user_change(name, users)
@@ -239,6 +285,7 @@ def handle_delete_confirm(chat_id, message_id, name):
             panel.write_secrets(users)
             panel.write_xray_ss_config(users)
             panel.write_hysteria_config(users)
+            panel.write_mtg_config(users)
     text, markup = users_page(0)
     send(chat_id, "کاربر %s حذف شد.\n\n%s" % (name, text), markup, message_id)
 
@@ -264,7 +311,7 @@ def continue_add_flow(chat_id, text):
             return True
         data["name"] = name
         flow["step"] = "password"
-        send(chat_id, "رمز عبور را بفرستید (۱۲ تا ۱۲۸ نویسه) یا فقط - بفرستید تا خودکار ساخته شود:")
+        send(chat_id, "هر رمزی می‌خواهید بفرستید (۱ تا ۱۲۸ نویسه؛ \" و خط جدید ممنوع) یا - برای ساخت خودکار")
         return True
     if step == "password":
         pw = text.strip()
@@ -272,8 +319,8 @@ def continue_add_flow(chat_id, text):
             import secrets as _secrets
 
             pw = _secrets.token_urlsafe(12)[:16]
-        if not panel.safe_secret(pw, 12, 128):
-            send(chat_id, "رمز نامعتبر است (۱۲ تا ۱۲۸ نویسه، فقط کاراکترهای امن انگلیسی). دوباره بفرستید یا - بزنید:")
+        if not panel.vpn_password_ok(pw):
+            send(chat_id, "رمز نامعتبر است. هر رمزی می‌خواهید بفرستید (۱ تا ۱۲۸ نویسه؛ \" و خط جدید ممنوع) یا - برای ساخت خودکار")
             return True
         data["password"] = pw
         flow["step"] = "quota"
@@ -288,25 +335,38 @@ def continue_add_flow(chat_id, text):
             send(chat_id, "عدد نامعتبر است. سهمیه به گیگابایت را بفرستید (۰ یعنی نامحدود):")
             return True
         data["quota_gb"] = q
-        data["protocols"] = set()
+        data["protocols"] = {"ikev2", "l2tp"}
         flow["step"] = "protocols"
         send(chat_id, protocols_pick_text(), protocols_pick_kb(data["protocols"]))
         return True
     return True
 
 
-PROTO_LABELS = {"ss": "Shadowsocks", "hy": "Hysteria2", "vless": "VLESS"}
+PROTO_LABELS = {
+    "ikev2": "IKEv2",
+    "l2tp": "L2TP",
+    "ss": "Shadowsocks",
+    "hy": "Hysteria2",
+    "vless": "VLESS",
+    "vmess": "VMess",
+    "http": "HTTP",
+    "mtg": "MTProto",
+}
 
 
 def protocols_pick_text():
-    return "پروتکل‌های اضافه روی این کاربر (علاوه بر IKEv2) را انتخاب و بعد تأیید کنید:"
+    return "پروتکل‌های این کاربر را انتخاب کنید (پیش‌فرض: IKEv2 و L2TP) و بعد تأیید کنید:"
 
 
 def protocols_pick_kb(selected):
     rows = []
-    for key, label in PROTO_LABELS.items():
-        mark = "✅" if key in selected else "◻️"
-        rows.append([{"text": "%s %s" % (mark, label), "callback_data": "addtoggle:%s" % key}])
+    items = list(PROTO_LABELS.items())
+    for i in range(0, len(items), 2):
+        row = []
+        for key, label in items[i : i + 2]:
+            mark = "✅" if key in selected else "◻️"
+            row.append({"text": "%s %s" % (mark, label), "callback_data": "addtoggle:%s" % key})
+        rows.append(row)
     rows.append([{"text": "✔️ تأیید و ساخت کاربر", "callback_data": "addconfirm"}])
     return kb(rows)
 
@@ -323,6 +383,7 @@ def handle_addtoggle(chat_id, message_id, key):
     send(chat_id, protocols_pick_text(), protocols_pick_kb(selected), message_id)
 
 
+
 def finish_add_flow(chat_id, message_id):
     flow = FLOWS.pop(chat_id, None)
     if not flow:
@@ -330,9 +391,14 @@ def finish_add_flow(chat_id, message_id):
     data = flow["data"]
     name = data["name"]
     selected = data.get("protocols") or set()
+    ikev2_enabled = "ikev2" in selected
+    l2tp_enabled = "l2tp" in selected
     ss_enabled = "ss" in selected
     hy_enabled = "hy" in selected
     vless_enabled = "vless" in selected
+    vmess_enabled = "vmess" in selected
+    http_enabled = "http" in selected
+    mtg_enabled = "mtg" in selected
     with panel._lock:
         users = panel.load_users()
         if name in users:
@@ -345,17 +411,25 @@ def finish_add_flow(chat_id, message_id):
             "used_bytes": 0,
             "created": panel.today_iso(),
             "enabled": True,
+            "ikev2_enabled": ikev2_enabled,
+            "l2tp_enabled": l2tp_enabled,
             "ss_enabled": ss_enabled,
             "hy_enabled": hy_enabled,
             "vless_enabled": vless_enabled,
+            "vmess_enabled": vmess_enabled,
+            "http_enabled": http_enabled,
+            "mtg_enabled": mtg_enabled,
             "ss_key": panel.new_ss_key() if ss_enabled else "",
             "ss_port": panel.allocate_ss_port() if ss_enabled else None,
             "vless_uuid": panel.new_vless_uuid() if vless_enabled else "",
+            "vmess_uuid": panel.new_vmess_uuid() if vmess_enabled else "",
+            "sub_token": panel.new_sub_token(),
         }
         panel.save_users(users)
         panel.write_secrets(users)
         panel.write_xray_ss_config(users)
         panel.write_hysteria_config(users)
+        panel.write_mtg_config(users)
     send(
         chat_id,
         "✅ کاربر ساخته شد.\n\nنام: <code>%s</code>\nرمز: <code>%s</code>\n\n%s"

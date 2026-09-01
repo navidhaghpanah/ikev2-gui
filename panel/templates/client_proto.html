@@ -1,18 +1,18 @@
 {% extends "base.html" %}
 {% block content %}
 <section class="panel">
-  <header class="panel-header"><div><h2>{{ proto_name }}</h2><p>این کانفیگ فقط برای همین کاربر معتبر است؛ آن را با کسی به‌اشتراک نگذارید.</p></div></header>
+  <header class="panel-header"><div><h2>{{ proto_name }}</h2><p>{{ t.proto_only }}</p></div></header>
   <div class="proto-grid">
-    <div class="proto-qr"><img src="{{ qr_url }}" alt="QR کد اتصال {{ proto_name }}" width="220" height="220"></div>
+    <div class="proto-qr"><img src="{{ qr_url }}" alt="QR {{ proto_name }}" width="220" height="220"></div>
     <div class="proto-fields">
-      <label><span>لینک اتصال (برای کپی کلیک کنید)</span><input class="copyable" type="text" dir="ltr" readonly value="{{ uri }}"></label>
+      <label><span>{{ t.proto_uri }}</span><input class="copyable" type="text" dir="ltr" readonly value="{{ uri }}"></label>
       {% if method %}<label><span>Method</span><input class="copyable" type="text" dir="ltr" readonly value="{{ method }}"></label>{% endif %}
       {% if server_key %}<label><span>Server Key</span><input class="copyable" type="text" dir="ltr" readonly value="{{ server_key }}"></label>{% endif %}
       {% if user_key %}<label><span>User Key</span><input class="copyable" type="text" dir="ltr" readonly value="{{ user_key }}"></label>{% endif %}
-      <label><span>پورت</span><input class="copyable" type="text" dir="ltr" readonly value="{{ port }}"></label>
-      <label><span>سرور</span><input class="copyable" type="text" dir="ltr" readonly value="{{ host }}"></label>
+      <label><span>{{ t.port }}</span><input class="copyable" type="text" dir="ltr" readonly value="{{ port }}"></label>
+      <label><span>{{ t.server }}</span><input class="copyable" type="text" dir="ltr" readonly value="{{ host }}"></label>
     </div>
   </div>
-  <p><a class="secondary-button small" href="{{ url_for('clients_page') }}">بازگشت به کلاینت‌ها</a></p>
+  <p><a class="secondary-button small" href="{{ url_for('clients_page') }}">{{ t.back_clients }}</a></p>
 </section>
 {% endblock %}

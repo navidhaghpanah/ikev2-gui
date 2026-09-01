@@ -74,6 +74,582 @@ DOMAIN_RE = re.compile(
 )
 FA_D = str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹")
 
+I18N = {
+    "fa": {
+        "brand_sub": "مدیریت شبکه خصوصی",
+        "server_live": "سرور فعال",
+        "nav_manage": "مدیریت",
+        "nav_dash": "داشبورد",
+        "nav_users": "کاربران",
+        "nav_sessions": "نشست‌ها",
+        "nav_clients": "کلاینت‌ها",
+        "nav_system": "سیستم",
+        "nav_settings": "تنظیمات",
+        "nav_logs": "گزارش‌ها",
+        "logout": "خروج",
+        "admin_fallback": "مدیر",
+        "admin_role": "مدیر سیستم",
+        "live": "سرویس آنلاین",
+        "stale": "اطلاعات قدیمی",
+        "cpu": "CPU",
+        "ram": "RAM",
+        "theme_to_light": "روشن",
+        "theme_to_dark": "تیره",
+        "restart": "ری‌استارت پنل",
+        "restart_confirm": "پنل وب ری‌استارت شود؟ تونل‌های VPN قطع نمی‌شوند.",
+        "update": "به‌روزرسانی",
+        "update_confirm": "پنل به‌روزرسانی و ری‌استارت می‌شود (فقط پنل وب؛ تانل‌های فعال قطع نمی‌شوند). ادامه می‌دهید؟",
+        "confirm_title": "تأیید عملیات",
+        "cancel": "انصراف",
+        "confirm": "تأیید",
+        "copied": "کپی شد ✓",
+        "show_pass": "نمایش",
+        "hide_pass": "پنهان",
+        "working": "در حال انجام…",
+        "menu": "منو",
+        "dash_title": "داشبورد",
+        "dash_sub": "نمای کلی سرور و اتصال‌های فعال",
+        "users_title": "کاربران",
+        "users_sub": "ساخت حساب و مدیریت حجم و انقضا",
+        "sessions_title": "نشست‌ها",
+        "sessions_sub": "اتصال‌های زنده و پاک‌سازی نشست‌های قدیمی",
+        "clients_title": "کلاینت‌ها",
+        "clients_sub": "فایل‌های آمادهٔ اتصال برای دستگاه‌ها",
+        "settings_title": "تنظیمات",
+        "settings_sub": "امنیت، DNS، پشتیبان و محدودیت نشست‌ها",
+        "logs_title": "گزارش‌ها",
+        "logs_sub": "آخرین ۲۰۰ خط journalctl سرویس‌های پنل",
+        "online_users": "کاربران آنلاین",
+        "of_accounts": "از %(total)s حساب",
+        "active_sessions": "نشست‌های فعال",
+        "ike_l2": "IKEv2 و L2TP",
+        "sys_load": "بار سیستم",
+        "cpu_cores": "%(n)s هستهٔ پردازشی",
+        "uptime": "زمان فعالیت",
+        "recent_sessions": "نشست‌های اخیر",
+        "recent_sessions_p": "آخرین اتصال‌های فعال روی سرور",
+        "view_all": "مشاهده همه ←",
+        "col_user": "کاربر",
+        "col_proto": "پروتکل",
+        "col_vip": "آی‌پی داخلی",
+        "col_remote": "آی‌پی اینترنت",
+        "col_uptime": "مدت اتصال",
+        "col_traffic": "ترافیک",
+        "unknown": "نامشخص",
+        "no_sessions": "نشست فعالی وجود ندارد.",
+        "resources": "منابع سرور",
+        "resources_p": "وضعیت لحظه‌ای سیستم",
+        "healthy": "سالم",
+        "processor": "پردازنده",
+        "memory": "حافظه RAM",
+        "of": "از",
+        "disk": "فضای دیسک",
+        "net_traffic": "ترافیک شبکه",
+        "net_traffic_p": "سرعت لحظه‌ای و مجموع اینترفیس %(iface)s",
+        "down_speed": "↓ سرعت دانلود",
+        "up_speed": "↑ سرعت آپلود",
+        "rx_total": "کل دانلود از زمان بوت",
+        "tx_total": "کل آپلود از زمان بوت",
+        "quick": "دسترسی سریع",
+        "quick_p": "کارهای پرکاربرد مدیریت سرور",
+        "quick_add": "ساخت کاربر",
+        "quick_add_p": "حساب VPN جدید بسازید",
+        "quick_sess": "مدیریت نشست‌ها",
+        "quick_sess_p": "اتصال‌های قدیمی را ببندید",
+        "quick_cli": "دریافت کلاینت",
+        "quick_cli_p": "فایل ویندوز و آیفون",
+        "quick_set": "تنظیمات سرور",
+        "quick_set_p": "DNS، امنیت و محدودیت‌ها",
+        "online_now": "کاربران آنلاین",
+        "online_now_p": "حساب‌های متصل در این لحظه",
+        "nobody_online": "کسی آنلاین نیست.",
+        "all_accounts": "کل حساب‌ها",
+        "offline": "آفلاین",
+        "online": "آنلاین",
+        "max_per_user": "نشست مجاز هر کاربر",
+        "add_user": "افزودن کاربر جدید",
+        "add_user_p": "برای کاربر نام، رمز و در صورت نیاز محدودیت تعیین کنید.",
+        "username": "نام کاربری",
+        "password": "رمز عبور",
+        "pass_ph": "هر رمزی می‌خواهید (۱ تا ۱۲۸ نویسه)",
+        "expires": "تاریخ انقضا",
+        "expires_hint": "خالی یعنی بدون انقضا",
+        "quota": "حجم (GB)",
+        "quota_hint": "صفر یعنی نامحدود",
+        "create_user": "+ ساخت کاربر",
+        "user_list": "فهرست کاربران",
+        "user_list_p": "ویرایش حجم، تاریخ و رمز بدون نمایش رمز فعلی",
+        "n_users": "%(n)s کاربر",
+        "col_status": "وضعیت",
+        "col_expires": "انقضا",
+        "col_quota": "مصرف / سهمیه",
+        "col_edit": "ویرایش حساب",
+        "unlimited": "نامحدود",
+        "created": "ایجاد",
+        "no_users": "هنوز کاربری ساخته نشده است.",
+        "edit_account": "ویرایش حساب",
+        "edit_account_p": "تنظیمات حساب",
+        "new_pass": "رمز جدید",
+        "keep_pass": "برای حفظ رمز خالی بگذارید",
+        "active_protos": "پروتکل‌های فعال",
+        "reset_traffic": "مصرف ترافیک این کاربر صفر شود",
+        "save": "ذخیره تغییرات",
+        "close": "بستن",
+        "delete_user_q": "حساب %(name)s حذف شود؟ این عملیات قابل بازگشت نیست.",
+        "delete_user": "حذف کاربر",
+        "delete_user_aria": "حذف %(name)s",
+        "cap_per_user": "سقف هر کاربر",
+        "cleanup_old": "پاک‌سازی نشست‌های قدیمی",
+        "sess_info": "جدیدترین %(n)s نشست هر کاربر حفظ می‌شود. نشست‌های اضافه به‌صورت خودکار حداکثر تا ۲۰ ثانیه بعد بسته می‌شوند.",
+        "live_conns": "اتصال‌های زنده",
+        "live_conns_p": "برای بستن فوری یک اتصال IKEv2 از دکمهٔ انتهای ردیف استفاده کنید.",
+        "col_id": "شناسه",
+        "col_duration": "مدت",
+        "col_du": "دانلود / آپلود",
+        "drop_conn": "قطع اتصال",
+        "drop_conn_q": "نشست #%(id)s مربوط به %(user)s قطع شود؟",
+        "drop_title": "قطع اتصال",
+        "no_conn": "در حال حاضر اتصال فعالی وجود ندارد.",
+        "recommended": "پیشنهادی",
+        "win_title": "Windows — IKEv2",
+        "win_p": "نصب خودکار اتصال IKEv2 همراه ابزار بررسی",
+        "dl_zip": "دانلود فایل ZIP",
+        "ready_profile": "پروفایل آماده",
+        "ios_title": "iPhone / iPad — IKEv2",
+        "ios_p": "پروفایل استاندارد برای اتصال سریع IKEv2",
+        "dl_mobileconfig": "دانلود mobileconfig",
+        "guide_ike": "راهنمای اتصال — IKEv2",
+        "guide_l2": "راهنمای اتصال — L2TP",
+        "guide_extra": "راهنمای اتصال — VLESS / Shadowsocks / Hysteria2",
+        "guide_more": "راهنمای اتصال — VMess / HTTP / MTProto",
+        "android_ike": "Android — IKEv2",
+        "get_client": "دریافت کلاینت ←",
+        "conn_info": "اطلاعات اتصال",
+        "conn_info_p": "مقادیر مرجع برای راه‌اندازی دستی کلاینت",
+        "conn_type": "نوع اتصال",
+        "cert": "Certificate",
+        "dns_now": "DNS فعلی",
+        "card_sessions": "نشست‌های هم‌زمان",
+        "card_sessions_p": "کنترل تعداد اتصال مجاز برای هر حساب",
+        "max_sess": "حداکثر نشست برای هر کاربر",
+        "max_sess_h": "بین ۱ تا ۱۰؛ روی IKEv2، Shadowsocks و Hysteria2 اعمال می‌شود. نشست/دستگاه اضافه خودکار قطع می‌شود.",
+        "save_cleanup": "ذخیره و پاک‌سازی",
+        "card_dns": "DNS تونل",
+        "card_dns_p": "سرورهای DNS ارسال‌شده به کلاینت",
+        "dns_addrs": "آدرس‌های DNS",
+        "dns_h": "حداکثر چهار IP، جداشده با ویرگول",
+        "save_dns": "ذخیره DNS",
+        "card_profile": "پروفایل من",
+        "card_profile_p": "نام و راه ارتباطی که فقط برای شما در پنل نمایش داده می‌شود",
+        "display_name": "نام نمایشی",
+        "contact": "راه ارتباطی (اختیاری)",
+        "save_profile": "ذخیره پروفایل",
+        "card_admin": "امنیت پنل",
+        "card_admin_p": "تغییر رمز حساب مدیر %(user)s",
+        "admin_pass": "رمز جدید مدیر",
+        "admin_pass_ph": "حداقل ۱۲ نویسه",
+        "admin_pass_h": "از یک رمز اختصاصی و طولانی استفاده کنید.",
+        "change_admin": "تغییر رمز پنل",
+        "card_psk": "کلید مشترک L2TP",
+        "card_psk_p": "فقط برای اتصال‌های قدیمی L2TP",
+        "new_psk": "PSK جدید",
+        "save_psk": "ذخیره PSK",
+        "card_domain": "دامنه IKEv2 / L2TP",
+        "card_domain_p": "آدرس سرور و Remote ID کلاینت‌ها",
+        "domain_now": "دامنه فعلی / جدید",
+        "save_domain": "ذخیره دامنه",
+        "card_update": "به‌روزرسانی پنل",
+        "update_none": "مخزن گیت روی سرور پیدا نشد",
+        "update_behind": "%(n)s کامیت جدید موجود است",
+        "update_ok": "پنل به‌روز است",
+        "ver_current": "نسخه فعلی",
+        "ver_latest": "آخرین نسخه",
+        "update_now": "به‌روزرسانی الان",
+        "update_install": "نصب و به‌روزرسانی",
+        "update_again": "بررسی و اعمال دوباره",
+        "card_tg": "ربات تلگرام",
+        "card_tg_on": "مدیریت کاربران از تلگرام — فعال (%(tok)s)",
+        "card_tg_off": "مدیریت کاربران از تلگرام — غیرفعال",
+        "tg_token": "توکن ربات (از BotFather)",
+        "save_tg": "ذخیره تنظیمات ربات",
+        "card_backup": "پشتیبان و بازیابی",
+        "card_backup_p": "users.json، ترافیک و config.json — بدون فایل PSK آی‌پی‌سک",
+        "download_backup": "دانلود پشتیبان",
+        "restore": "بازیابی",
+        "restore_h": "فایل zip پشتیبان را انتخاب کنید. تنظیمات و کاربران جایگزین می‌شوند.",
+        "card_restart": "ری‌استارت پنل",
+        "card_restart_p": "فقط سرویس وب؛ تونل‌های فعال قطع نمی‌شوند",
+        "card_logs": "گزارش سرویس‌ها",
+        "card_logs_p": "journalctl واحدهای پنل، xray، hysteria، mtg و nginx",
+        "open_logs": "مشاهده گزارش‌ها",
+        "login_title": "ورود — NH MultiVPN",
+        "login_h": "ورود به NH MultiVPN",
+        "login_p": "پنل مدیریت کاربران",
+        "login_user": "نام کاربری پنل",
+        "login_pass": "رمز عبور",
+        "login_btn": "ورود",
+        "proto_uri": "لینک اتصال (برای کپی کلیک کنید)",
+        "port": "پورت",
+        "server": "سرور",
+        "back_clients": "بازگشت به کلاینت‌ها",
+        "proto_only": "این کانفیگ فقط برای همین کاربر معتبر است؛ آن را با کسی به‌اشتراک نگذارید.",
+        "copy_title": "برای کپی کلیک کنید",
+        "csrf_bad": "درخواست نامعتبر یا منقضی شده است.",
+        "login_csrf": "درخواست نامعتبر است؛ صفحه را تازه‌سازی کنید.",
+        "login_lock": "تلاش‌های ورود زیاد بوده؛ چند دقیقه بعد دوباره امتحان کنید.",
+        "login_bad": "نام کاربری یا رمز عبور اشتباه است.",
+        "user_name_bad": "نام کاربری فقط حروف انگلیسی و عدد، ۲ تا ۳۲ نویسه.",
+        "vpn_pass_bad": "رمز VPN باید ۱ تا ۱۲۸ نویسه باشد و شامل \" یا بک‌اسلش یا خط جدید نباشد.",
+        "expires_bad": "تاریخ انقضا نامعتبر است.",
+        "quota_bad": "حجم باید عدد باشد (۰ = نامحدود).",
+        "user_exists": "این کاربر از قبل وجود دارد.",
+        "user_added": "کاربر %(name)s اضافه شد (%(label)s).",
+        "user_bad": "نام کاربری نامعتبر است.",
+        "user_missing": "کاربر پیدا نشد.",
+        "pass_bad": "رمز عبور نامعتبر است.",
+        "quota_invalid": "حجم نامعتبر است.",
+        "user_saved": "تنظیمات کاربر %(name)s ذخیره شد.",
+        "user_deleted": "کاربر %(name)s حذف شد.",
+        "old_marked": "%(n)s نشست قدیمی برای بسته‌شدن علامت‌گذاری شد.",
+        "no_extra_sess": "نشست اضافه‌ای پیدا نشد.",
+        "sess_id_bad": "شناسهٔ نشست نامعتبر است.",
+        "sess_missing": "نشست پیدا نشد یا قبلاً بسته شده است.",
+        "sess_marked": "نشست %(id)s برای بسته‌شدن علامت‌گذاری شد.",
+        "domain_bad": "دامنه نامعتبر است.",
+        "domain_ssl_ok": "دامنه IKEv2 / L2TP به %(domain)s تغییر کرد و گواهی SSL به‌روز شد.",
+        "domain_ssl_fail": "دامنه %(domain)s ذخیره شد اما صدور گواهی SSL ناموفق بود؛ باید گواهی Let's Encrypt برای این دامنه صادر شود.%(extra)s",
+        "psk_bad": "کلید مشترک باید ۱۶ تا ۱۲۸ نویسه و فقط شامل نویسه‌های امن انگلیسی باشد.",
+        "psk_ok": "کلید مشترک (PSK) عوض شد. کلاینت‌های L2TP باید PSK جدید بزنند.",
+        "dns_count": "یک تا چهار DNS وارد کنید.",
+        "dns_bad": "DNS باید یک آدرس IPv4 یا IPv6 معتبر باشد.",
+        "dns_ok": "DNS ذخیره شد. اتصال‌های بعدی با DNS جدید می‌آیند.",
+        "admin_len": "رمز پنل باید ۱۲ تا ۱۲۸ نویسه باشد.",
+        "admin_ok": "رمز ورود پنل عوض شد.",
+        "profile_ok": "پروفایل ذخیره شد.",
+        "sess_limit_bad": "تعداد نشست هم‌زمان باید بین ۱ تا ۱۰ باشد.",
+        "sess_limit_cut": "محدودیت ذخیره شد و %(n)s نشست قدیمی بسته شد.",
+        "sess_limit_ok": "محدودیت نشست‌های هم‌زمان ذخیره شد.",
+        "tg_token_bad": "توکن ربات تلگرام نامعتبر است.",
+        "tg_id_bad": "آیدی عددی تلگرام نامعتبر است: %(part)s",
+        "tg_need_admin": "برای فعال‌کردن ربات باید حداقل یک آیدی عددی ادمین وارد کنید.",
+        "tg_ok": "تنظیمات ربات تلگرام ذخیره و ربات ری‌استارت شد.",
+        "tg_off": "ربات تلگرام غیرفعال شد.",
+        "upd_ok": "پنل به‌روزرسانی شد و ری‌استارت شد.",
+        "upd_fail": "به‌روزرسانی ناموفق بود. جزئیات: %(out)s",
+        "no_domain": "دامنه در تنظیمات نیست.",
+        "no_win_client": "فایل کلاینت ویندوز روی سرور نیست.",
+        "ss_off": "Shadowsocks برای این کاربر فعال نیست.",
+        "restart_ok": "پنل تا چند ثانیه دیگر ری‌استارت می‌شود.",
+        "backup_ok": "پشتیبان بازیابی شد و کانفیگ سرویس‌ها بازنویسی شد.",
+        "backup_bad": "فایل پشتیبان نامعتبر است.",
+        "backup_missing": "فایل zip انتخاب نشده است.",
+        "unit_b": "بایت",
+        "unit_kb": "کیلوبایت",
+        "unit_mb": "مگابایت",
+        "unit_gb": "گیگابایت",
+        "unit_tb": "ترابایت",
+        "u_day": "روز",
+        "u_hour": "ساعت",
+        "u_min": "دقیقه",
+        "per_sec": "/ثانیه",
+        "blocked": "غیرفعال",
+        "expired": "منقضی",
+        "quota_full": "اتمام حجم",
+        "quota_nan": "حجم نامعتبر",
+    },
+    "en": {
+        "brand_sub": "Private network admin",
+        "server_live": "Server online",
+        "nav_manage": "Manage",
+        "nav_dash": "Dashboard",
+        "nav_users": "Users",
+        "nav_sessions": "Sessions",
+        "nav_clients": "Clients",
+        "nav_system": "System",
+        "nav_settings": "Settings",
+        "nav_logs": "Logs",
+        "logout": "Log out",
+        "admin_fallback": "Admin",
+        "admin_role": "System admin",
+        "live": "Service online",
+        "stale": "Stale data",
+        "cpu": "CPU",
+        "ram": "RAM",
+        "theme_to_light": "Light",
+        "theme_to_dark": "Dark",
+        "restart": "Restart panel",
+        "restart_confirm": "Restart the web panel? VPN tunnels stay up.",
+        "update": "Update",
+        "update_confirm": "The panel will update and restart (web panel only; live tunnels stay up). Continue?",
+        "confirm_title": "Confirm",
+        "cancel": "Cancel",
+        "confirm": "Confirm",
+        "copied": "Copied ✓",
+        "show_pass": "Show",
+        "hide_pass": "Hide",
+        "working": "Working…",
+        "menu": "Menu",
+        "dash_title": "Dashboard",
+        "dash_sub": "Server overview and live connections",
+        "users_title": "Users",
+        "users_sub": "Create accounts and manage quota and expiry",
+        "sessions_title": "Sessions",
+        "sessions_sub": "Live connections and cleanup",
+        "clients_title": "Clients",
+        "clients_sub": "Ready-made connection files",
+        "settings_title": "Settings",
+        "settings_sub": "Security, DNS, backup and session limits",
+        "logs_title": "Logs",
+        "logs_sub": "Last 200 journalctl lines for panel services",
+        "online_users": "Online users",
+        "of_accounts": "of %(total)s accounts",
+        "active_sessions": "Active sessions",
+        "ike_l2": "IKEv2 and L2TP",
+        "sys_load": "Load",
+        "cpu_cores": "%(n)s CPU cores",
+        "uptime": "Uptime",
+        "recent_sessions": "Recent sessions",
+        "recent_sessions_p": "Latest active connections",
+        "view_all": "View all →",
+        "col_user": "User",
+        "col_proto": "Protocol",
+        "col_vip": "Internal IP",
+        "col_remote": "Public IP",
+        "col_uptime": "Duration",
+        "col_traffic": "Traffic",
+        "unknown": "Unknown",
+        "no_sessions": "No active sessions.",
+        "resources": "Server resources",
+        "resources_p": "Live system status",
+        "healthy": "Healthy",
+        "processor": "CPU",
+        "memory": "RAM",
+        "of": "of",
+        "disk": "Disk",
+        "net_traffic": "Network",
+        "net_traffic_p": "Live speed and totals on %(iface)s",
+        "down_speed": "↓ Download",
+        "up_speed": "↑ Upload",
+        "rx_total": "Total download since boot",
+        "tx_total": "Total upload since boot",
+        "quick": "Quick actions",
+        "quick_p": "Common admin tasks",
+        "quick_add": "New user",
+        "quick_add_p": "Create a VPN account",
+        "quick_sess": "Sessions",
+        "quick_sess_p": "Drop old connections",
+        "quick_cli": "Get clients",
+        "quick_cli_p": "Windows and iPhone files",
+        "quick_set": "Settings",
+        "quick_set_p": "DNS, security and limits",
+        "online_now": "Online users",
+        "online_now_p": "Accounts connected right now",
+        "nobody_online": "Nobody is online.",
+        "all_accounts": "Accounts",
+        "offline": "Offline",
+        "online": "Online",
+        "max_per_user": "Sessions per user",
+        "add_user": "Add user",
+        "add_user_p": "Name, password and optional limits.",
+        "username": "Username",
+        "password": "Password",
+        "pass_ph": "Any password (1–128 characters)",
+        "expires": "Expiry",
+        "expires_hint": "Empty means never",
+        "quota": "Quota (GB)",
+        "quota_hint": "Zero means unlimited",
+        "create_user": "+ Create user",
+        "user_list": "Users",
+        "user_list_p": "Edit quota, expiry and password without showing the current one",
+        "n_users": "%(n)s users",
+        "col_status": "Status",
+        "col_expires": "Expiry",
+        "col_quota": "Used / quota",
+        "col_edit": "Edit",
+        "unlimited": "Unlimited",
+        "created": "Created",
+        "no_users": "No users yet.",
+        "edit_account": "Edit account",
+        "edit_account_p": "Account settings",
+        "new_pass": "New password",
+        "keep_pass": "Leave empty to keep",
+        "active_protos": "Enabled protocols",
+        "reset_traffic": "Reset this user's traffic",
+        "save": "Save",
+        "close": "Close",
+        "delete_user_q": "Delete %(name)s? This cannot be undone.",
+        "delete_user": "Delete user",
+        "delete_user_aria": "Delete %(name)s",
+        "cap_per_user": "Cap per user",
+        "cleanup_old": "Clean old sessions",
+        "sess_info": "The newest %(n)s sessions per user are kept. Extra sessions are dropped within about 20 seconds.",
+        "live_conns": "Live connections",
+        "live_conns_p": "Use the end-of-row button to drop an IKEv2 session immediately.",
+        "col_id": "ID",
+        "col_duration": "Duration",
+        "col_du": "Down / up",
+        "drop_conn": "Drop",
+        "drop_conn_q": "Drop session #%(id)s for %(user)s?",
+        "drop_title": "Drop connection",
+        "no_conn": "No active connections.",
+        "recommended": "Recommended",
+        "win_title": "Windows — IKEv2",
+        "win_p": "Automatic IKEv2 profile plus a checker",
+        "dl_zip": "Download ZIP",
+        "ready_profile": "Ready profile",
+        "ios_title": "iPhone / iPad — IKEv2",
+        "ios_p": "Standard profile for a quick IKEv2 connect",
+        "dl_mobileconfig": "Download mobileconfig",
+        "guide_ike": "Connect — IKEv2",
+        "guide_l2": "Connect — L2TP",
+        "guide_extra": "Connect — VLESS / Shadowsocks / Hysteria2",
+        "guide_more": "Connect — VMess / HTTP / MTProto",
+        "android_ike": "Android — IKEv2",
+        "get_client": "Get clients →",
+        "conn_info": "Connection info",
+        "conn_info_p": "Reference values for a manual client",
+        "conn_type": "Type",
+        "cert": "Certificate",
+        "dns_now": "Current DNS",
+        "card_sessions": "Concurrent sessions",
+        "card_sessions_p": "How many connections each account may keep",
+        "max_sess": "Max sessions per user",
+        "max_sess_h": "1 to 10; applies to IKEv2, Shadowsocks and Hysteria2. Extra devices are dropped.",
+        "save_cleanup": "Save and clean",
+        "card_dns": "Tunnel DNS",
+        "card_dns_p": "DNS servers pushed to clients",
+        "dns_addrs": "DNS addresses",
+        "dns_h": "Up to four IPs, comma-separated",
+        "save_dns": "Save DNS",
+        "card_profile": "My profile",
+        "card_profile_p": "Name and contact shown only to you",
+        "display_name": "Display name",
+        "contact": "Contact (optional)",
+        "save_profile": "Save profile",
+        "card_admin": "Panel security",
+        "card_admin_p": "Change password for admin %(user)s",
+        "admin_pass": "New admin password",
+        "admin_pass_ph": "At least 12 characters",
+        "admin_pass_h": "Use a long, unique password.",
+        "change_admin": "Change panel password",
+        "card_psk": "L2TP shared key",
+        "card_psk_p": "Only for legacy L2TP",
+        "new_psk": "New PSK",
+        "save_psk": "Save PSK",
+        "card_domain": "IKEv2 / L2TP domain",
+        "card_domain_p": "Server address and client Remote ID",
+        "domain_now": "Current / new domain",
+        "save_domain": "Save domain",
+        "card_update": "Update panel",
+        "update_none": "Git repo not found on the server",
+        "update_behind": "%(n)s new commits available",
+        "update_ok": "Panel is up to date",
+        "ver_current": "Current",
+        "ver_latest": "Latest",
+        "update_now": "Update now",
+        "update_install": "Install and update",
+        "update_again": "Check and apply again",
+        "card_tg": "Telegram bot",
+        "card_tg_on": "Manage users from Telegram — on (%(tok)s)",
+        "card_tg_off": "Manage users from Telegram — off",
+        "tg_token": "Bot token (BotFather)",
+        "save_tg": "Save bot settings",
+        "card_backup": "Backup and restore",
+        "card_backup_p": "users.json, traffic files and config.json — not the IPsec PSK file",
+        "download_backup": "Download backup",
+        "restore": "Restore",
+        "restore_h": "Choose a backup zip. Users and config will be replaced.",
+        "card_restart": "Restart panel",
+        "card_restart_p": "Web service only; live tunnels stay up",
+        "card_logs": "Service logs",
+        "card_logs_p": "journalctl for panel, xray, hysteria, mtg and nginx",
+        "open_logs": "Open logs",
+        "login_title": "Login — NH MultiVPN",
+        "login_h": "Sign in to NH MultiVPN",
+        "login_p": "User admin panel",
+        "login_user": "Panel username",
+        "login_pass": "Password",
+        "login_btn": "Sign in",
+        "proto_uri": "URI (click to copy)",
+        "port": "Port",
+        "server": "Server",
+        "back_clients": "Back to clients",
+        "proto_only": "This config is only for this user; do not share it.",
+        "copy_title": "Click to copy",
+        "csrf_bad": "Invalid or expired request.",
+        "login_csrf": "Invalid request; refresh the page.",
+        "login_lock": "Too many login attempts; try again in a few minutes.",
+        "login_bad": "Wrong username or password.",
+        "user_name_bad": "Username: English letters and digits, 2–32 characters.",
+        "vpn_pass_bad": "VPN password must be 1–128 characters and cannot contain \", backslash, or newlines.",
+        "expires_bad": "Invalid expiry date.",
+        "quota_bad": "Quota must be a number (0 = unlimited).",
+        "user_exists": "That user already exists.",
+        "user_added": "User %(name)s added (%(label)s).",
+        "user_bad": "Invalid username.",
+        "user_missing": "User not found.",
+        "pass_bad": "Invalid password.",
+        "quota_invalid": "Invalid quota.",
+        "user_saved": "Saved settings for %(name)s.",
+        "user_deleted": "Deleted %(name)s.",
+        "old_marked": "%(n)s old sessions marked to drop.",
+        "no_extra_sess": "No extra sessions found.",
+        "sess_id_bad": "Invalid session id.",
+        "sess_missing": "Session not found or already closed.",
+        "sess_marked": "Session %(id)s marked to drop.",
+        "domain_bad": "Invalid domain.",
+        "domain_ssl_ok": "IKEv2 / L2TP domain changed to %(domain)s and the SSL cert was updated.",
+        "domain_ssl_fail": "Domain %(domain)s saved but SSL issuance failed; a Let's Encrypt cert is still needed.%(extra)s",
+        "psk_bad": "PSK must be 16–128 English-safe characters.",
+        "psk_ok": "PSK changed. L2TP clients must use the new key.",
+        "dns_count": "Enter one to four DNS servers.",
+        "dns_bad": "DNS must be a valid IPv4 or IPv6 address.",
+        "dns_ok": "DNS saved. New connections will use it.",
+        "admin_len": "Panel password must be 12–128 characters.",
+        "admin_ok": "Panel password changed.",
+        "profile_ok": "Profile saved.",
+        "sess_limit_bad": "Concurrent sessions must be 1–10.",
+        "sess_limit_cut": "Limit saved and %(n)s old sessions dropped.",
+        "sess_limit_ok": "Concurrent session limit saved.",
+        "tg_token_bad": "Invalid Telegram bot token.",
+        "tg_id_bad": "Invalid Telegram numeric id: %(part)s",
+        "tg_need_admin": "Enter at least one admin numeric id to enable the bot.",
+        "tg_ok": "Telegram bot settings saved and the bot restarted.",
+        "tg_off": "Telegram bot disabled.",
+        "upd_ok": "Panel updated and restarted.",
+        "upd_fail": "Update failed. Details: %(out)s",
+        "no_domain": "Domain is not set.",
+        "no_win_client": "Windows client files are missing on the server.",
+        "ss_off": "Shadowsocks is not enabled for this user.",
+        "restart_ok": "The panel will restart in a moment.",
+        "backup_ok": "Backup restored and service configs rewritten.",
+        "backup_bad": "Invalid backup file.",
+        "backup_missing": "No zip file selected.",
+        "unit_b": "B",
+        "unit_kb": "KB",
+        "unit_mb": "MB",
+        "unit_gb": "GB",
+        "unit_tb": "TB",
+        "u_day": "d",
+        "u_hour": "h",
+        "u_min": "m",
+        "per_sec": "/s",
+        "blocked": "disabled",
+        "expired": "expired",
+        "quota_full": "quota used",
+        "quota_nan": "invalid quota",
+    },
+}
+
+COOKIE_MAX_AGE = 60 * 60 * 24 * 365
+LOG_UNITS = (
+    "ikev2-l2tp-gui",
+    "panel-shadowsocks",
+    "panel-hysteria",
+    "panel-mtg",
+    "nginx",
+)
+
 app = Flask(
     __name__,
     template_folder=str(APP_DIR / "templates"),
@@ -83,6 +659,7 @@ app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 app.config["SESSION_COOKIE_SECURE"] = True
 app.config["PERMANENT_SESSION_LIFETIME"] = 60 * 60 * 12
+app.config["MAX_CONTENT_LENGTH"] = 8 * 1024 * 1024
 
 _cpu_prev = None
 _net_prev = None
@@ -96,6 +673,86 @@ def fa(v):
     return str(v).translate(FA_D)
 
 
+def current_lang():
+    try:
+        cookie = (request.cookies.get("nh_lang") or "").strip()
+        if cookie in ("fa", "en"):
+            return cookie
+    except RuntimeError:
+        pass
+    lang = (load_config().get("lang") or "fa")
+    return lang if lang in ("fa", "en") else "fa"
+
+
+def current_theme():
+    try:
+        cookie = (request.cookies.get("nh_theme") or "").strip()
+        if cookie in ("dark", "light"):
+            return cookie
+    except RuntimeError:
+        pass
+    theme = (load_config().get("theme") or "dark")
+    return theme if theme in ("dark", "light") else "dark"
+
+
+def tr(key, **kwargs):
+    lang = current_lang()
+    table = I18N.get(lang) or I18N["fa"]
+    text = table.get(key) or I18N["fa"].get(key) or key
+    if kwargs:
+        try:
+            return text % kwargs
+        except (TypeError, ValueError, KeyError):
+            return text
+    return text
+
+
+def flash_t(key, **kwargs):
+    flash(tr(key, **kwargs))
+
+
+def set_ui_cookies(resp, theme=None, lang=None):
+    if theme in ("dark", "light"):
+        resp.set_cookie(
+            "nh_theme",
+            theme,
+            max_age=COOKIE_MAX_AGE,
+            httponly=False,
+            samesite="Lax",
+            secure=True,
+            path="/",
+        )
+    if lang in ("fa", "en"):
+        resp.set_cookie(
+            "nh_lang",
+            lang,
+            max_age=COOKIE_MAX_AGE,
+            httponly=False,
+            samesite="Lax",
+            secure=True,
+            path="/",
+        )
+    return resp
+
+
+def flag_on(u, key, default=True):
+    if not isinstance(u, dict) or key not in u:
+        return default
+    return bool(u.get(key))
+
+
+def vpn_password_ok(value):
+    if not isinstance(value, str):
+        return False
+    if not (1 <= len(value) <= 128):
+        return False
+    if '"' in value or "\\" in value:
+        return False
+    if "\r" in value or "\n" in value or "\x00" in value:
+        return False
+    return True
+
+
 def now_tehran():
     return datetime.now(TZ)
 
@@ -104,18 +761,24 @@ def today_iso():
     return now_tehran().date().isoformat()
 
 
-def human(n):
+def human(n, lang=None):
     try:
         n = float(n)
     except (TypeError, ValueError):
         n = 0
-    for unit in ("بایت", "کیلوبایت", "مگابایت", "گیگابایت", "ترابایت"):
-        if n < 1024 or unit == "ترابایت":
-            if unit == "بایت":
-                return fa("%d %s" % (int(n), unit))
-            return fa("%.1f %s" % (n, unit))
+    lang = lang or current_lang()
+    units = (tr("unit_b"), tr("unit_kb"), tr("unit_mb"), tr("unit_gb"), tr("unit_tb"))
+    last = units[-1]
+    for unit in units:
+        if n < 1024 or unit == last:
+            if unit == units[0]:
+                s = "%d %s" % (int(n), unit)
+            else:
+                s = "%.1f %s" % (n, unit)
+            return fa(s) if lang == "fa" else s
         n /= 1024.0
-    return fa("%.1f ترابایت" % n)
+    s = "%.1f %s" % (n, last)
+    return fa(s) if lang == "fa" else s
 
 
 def run(cmd, timeout=10):
@@ -194,6 +857,12 @@ def load_config():
     if not isinstance(names, list) or not names:
         cfg["reality_server_names"] = ["www.microsoft.com"]
         changed = True
+    if cfg.get("theme") not in ("dark", "light"):
+        cfg["theme"] = "dark"
+        changed = True
+    if cfg.get("lang") not in ("fa", "en"):
+        cfg["lang"] = "fa"
+        changed = True
     if changed:
         save_json(CONFIG_FILE, cfg)
     return cfg
@@ -255,16 +924,23 @@ def csrf_token():
 
 @app.context_processor
 def csrf_context():
-    return {"csrf_token": csrf_token}
+    lang = current_lang()
+    return {
+        "csrf_token": csrf_token,
+        "lang": lang,
+        "theme": current_theme(),
+        "t": I18N.get(lang) or I18N["fa"],
+        "content_dir": "rtl" if lang == "fa" else "ltr",
+    }
 
 
 def csrf_required(fn):
     @wraps(fn)
     def wrap(*args, **kwargs):
-        submitted = request.form.get("csrf_token", "")
+        submitted = request.form.get("csrf_token", "") or request.headers.get("X-CSRFToken", "")
         expected = session.get("csrf", "")
         if not expected or not secrets.compare_digest(submitted, expected):
-            flash("درخواست نامعتبر یا منقضی شده است.")
+            flash_t("csrf_bad")
             return redirect(request.referrer or url_for("index"))
         return fn(*args, **kwargs)
 
@@ -282,6 +958,10 @@ def security_headers(response):
     )
     if request.is_secure or request.headers.get("X-Forwarded-Proto") == "https":
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    if "nh_theme" not in request.cookies:
+        set_ui_cookies(response, theme=current_theme())
+    if "nh_lang" not in request.cookies:
+        set_ui_cookies(response, lang=current_lang())
     return response
 
 
@@ -319,22 +999,22 @@ def import_secrets_if_needed():
 
 def user_blocked(u):
     if not u.get("enabled", True):
-        return "غیرفعال"
+        return tr("blocked")
     exp = (u.get("expires") or "").strip()
     if exp:
         try:
             if date.fromisoformat(exp) < now_tehran().date():
-                return "منقضی"
+                return tr("expired")
         except ValueError:
             pass
     try:
         q = float(u.get("quota_gb") or 0)
     except (TypeError, ValueError):
-        return "حجم نامعتبر"
+        return tr("quota_nan")
     if not math.isfinite(q) or q < 0:
-        return "حجم نامعتبر"
+        return tr("quota_nan")
     if q > 0 and float(u.get("used_bytes") or 0) >= q * (1024 ** 3):
-        return "اتمام حجم"
+        return tr("quota_full")
     return ""
 
 
@@ -359,10 +1039,12 @@ def write_secrets(users=None, psk=None, public_ip=None, domain=None):
         pw = u.get("password") or ""
         # These values are rendered into strongSwan/PPP configuration files.
         # Routes validate them; this guard also protects imported legacy data.
-        if not safe_secret(pw, 4, 64):
+        if not vpn_password_ok(pw):
             continue
-        lines.append('%s : EAP "%s"' % (name, pw))
-        chap.append('%s  l2tpd  "%s"  *' % (name, pw))
+        if flag_on(u, "ikev2_enabled", True):
+            lines.append('%s : EAP "%s"' % (name, pw))
+        if flag_on(u, "l2tp_enabled", True):
+            chap.append('%s  l2tpd  "%s"  *' % (name, pw))
     IPSEC_SECRETS.write_text("\n".join(lines) + "\n", encoding="utf-8")
     os.chmod(IPSEC_SECRETS, 0o600)
     CHAP_SECRETS.write_text("\n".join(chap) + "\n", encoding="utf-8")
@@ -644,7 +1326,7 @@ def write_xray_ss_config(users=None):
         if user_blocked(u) or not u.get("http_enabled"):
             continue
         pw = u.get("password") or ""
-        if not safe_secret(pw, 4, 128):
+        if not vpn_password_ok(pw):
             continue
         http_accounts.append({"user": name, "pass": pw})
     if http_accounts:
@@ -721,7 +1403,7 @@ def write_hysteria_config(users=None):
         if user_blocked(u) or not u.get("hy_enabled"):
             continue
         pw = u.get("password") or ""
-        if not safe_secret(pw, 4, 128):
+        if not vpn_password_ok(pw):
             continue
         lines.append("    %s: %s" % (yaml_str(name), yaml_str(pw)))
         any_user = True
@@ -1324,12 +2006,13 @@ def fmt_uptime(sec):
     d, sec = divmod(sec, 86400)
     h, sec = divmod(sec, 3600)
     m, _ = divmod(sec, 60)
+    lang = current_lang()
     parts = []
     if d:
-        parts.append(fa(d) + " روز")
+        parts.append((fa(d) if lang == "fa" else str(d)) + " " + tr("u_day"))
     if h:
-        parts.append(fa(h) + " ساعت")
-    parts.append(fa(m) + " دقیقه")
+        parts.append((fa(h) if lang == "fa" else str(h)) + " " + tr("u_hour"))
+    parts.append((fa(m) if lang == "fa" else str(m)) + " " + tr("u_min"))
     return " ".join(parts)
 
 
@@ -1352,7 +2035,9 @@ def dashboard_payload():
                 "quota_gb": q,
                 "used_bytes": used,
                 "used_h": human(used),
-                "quota_h": "نامحدود" if q <= 0 else fa(gtrim(q)) + " گیگابایت",
+                "quota_h": tr("unlimited") if q <= 0 else (
+                    (fa(gtrim(q)) if current_lang() == "fa" else gtrim(q)) + " GB"
+                ),
                 "created": u.get("created") or "",
                 "online": name in online,
                 "block": block,
@@ -1360,6 +2045,8 @@ def dashboard_payload():
                 "vip": ses["vip"] if ses else "",
                 "remote": ses["remote"] if ses else "",
                 "uptime": ses["uptime"] if ses else "",
+                "ikev2_enabled": flag_on(u, "ikev2_enabled", True),
+                "l2tp_enabled": flag_on(u, "l2tp_enabled", True),
                 "ss_enabled": bool(u.get("ss_enabled")),
                 "hy_enabled": bool(u.get("hy_enabled")),
                 "vless_enabled": bool(u.get("vless_enabled")),
@@ -1393,8 +2080,8 @@ def dashboard_payload():
         "net_iface": hs["net_iface"] or "—",
         "net_rx_h": human(hs["net_rx"]),
         "net_tx_h": human(hs["net_tx"]),
-        "net_down_h": human(hs["net_down_bps"]) + "/ثانیه",
-        "net_up_h": human(hs["net_up_bps"]) + "/ثانیه",
+        "net_down_h": human(hs["net_down_bps"]) + tr("per_sec"),
+        "net_up_h": human(hs["net_up_bps"]) + tr("per_sec"),
         "now": now_tehran().strftime("%Y/%m/%d %H:%M"),
         "now_fa": fa(now_tehran().strftime("%Y/%m/%d %H:%M")),
         "profile_display_name": (load_admin().get("display_name") or "").strip(),
@@ -1412,16 +2099,18 @@ def gtrim(q):
 def login():
     load_admin()
     err = ""
+    cfg = load_config()
+    host = cfg.get("domain") or ""
     if request.method == "POST":
         submitted = request.form.get("csrf_token", "")
         expected = session.get("csrf", "")
         if not expected or not secrets.compare_digest(submitted, expected):
-            return render_template("login.html", err="درخواست نامعتبر است؛ صفحه را تازه‌سازی کنید.", host=load_config().get("domain") or ""), 400
+            return render_template("login.html", err=tr("login_csrf"), host=host), 400
         remote = request.headers.get("X-Real-IP", request.remote_addr or "")
         now = time.monotonic()
         attempts = [t for t in _login_attempts.get(remote, []) if now - t < LOGIN_WINDOW]
         if len(attempts) >= LOGIN_MAX_ATTEMPTS:
-            return render_template("login.html", err="تلاش‌های ورود زیاد بوده؛ چند دقیقه بعد دوباره امتحان کنید.", host=load_config().get("domain") or ""), 429
+            return render_template("login.html", err=tr("login_lock"), host=host), 429
         admin = load_admin()
         user = (request.form.get("user") or "").strip()
         pw = request.form.get("password") or ""
@@ -1430,17 +2119,14 @@ def login():
             session.permanent = True
             session.pop("csrf", None)
             _login_attempts.pop(remote, None)
-            return redirect(url_for("index"))
+            resp = redirect(url_for("index"))
+            return set_ui_cookies(resp, current_theme(), current_lang())
         attempts.append(now)
         _login_attempts[remote] = attempts
-        err = "نام کاربری یا رمز عبور اشتباه است."
-    cfg = load_config()
-    return render_template("login.html", err=err, host=cfg.get("domain") or "")
+        err = tr("login_bad")
+    return render_template("login.html", err=err, host=host)
 
 
-@app.route("/logout", methods=["POST"])
-@login_required
-@csrf_required
 def logout():
     session.clear()
     return redirect(url_for("login"))
@@ -1448,56 +2134,43 @@ def logout():
 
 @app.route("/")
 @login_required
-def index():
+def page_chrome(page, title_key, subtitle_key, extra=None):
     d = dashboard_payload()
     d["admin_user"] = load_admin().get("user") or ""
-    d["page"] = "dash"
-    d["page_title"] = "داشبورد"
-    d["page_subtitle"] = "نمای کلی سرور و اتصال‌های فعال"
-    return render_template("index.html", **d)
+    d["page"] = page
+    d["page_title"] = tr(title_key)
+    d["page_subtitle"] = tr(subtitle_key)
+    if extra:
+        d.update(extra)
+    return d
+
+
+def index():
+    return render_template("index.html", **page_chrome("dash", "dash_title", "dash_sub"))
 
 
 @app.route("/users")
 @login_required
 def users_page():
-    d = dashboard_payload()
-    d["admin_user"] = load_admin().get("user") or ""
-    d["page"] = "users"
-    d["page_title"] = "کاربران"
-    d["page_subtitle"] = "ساخت حساب و مدیریت حجم و انقضا"
-    return render_template("users.html", **d)
+    return render_template("users.html", **page_chrome("users", "users_title", "users_sub"))
 
 
 @app.route("/sessions")
 @login_required
 def sessions_page():
-    d = dashboard_payload()
-    d["admin_user"] = load_admin().get("user") or ""
-    d["page"] = "sessions"
-    d["page_title"] = "نشست‌ها"
-    d["page_subtitle"] = "اتصال‌های زنده و پاک‌سازی نشست‌های قدیمی"
-    return render_template("sessions.html", **d)
+    return render_template("sessions.html", **page_chrome("sessions", "sessions_title", "sessions_sub"))
 
 
 @app.route("/clients")
 @login_required
 def clients_page():
-    d = dashboard_payload()
-    d["admin_user"] = load_admin().get("user") or ""
-    d["page"] = "clients"
-    d["page_title"] = "کلاینت‌ها"
-    d["page_subtitle"] = "فایل‌های آمادهٔ اتصال برای دستگاه‌ها"
-    return render_template("clients.html", **d)
+    return render_template("clients.html", **page_chrome("clients", "clients_title", "clients_sub"))
 
 
 @app.route("/settings")
 @login_required
 def settings():
-    d = dashboard_payload()
-    d["admin_user"] = load_admin().get("user") or ""
-    d["page"] = "settings"
-    d["page_title"] = "تنظیمات"
-    d["page_subtitle"] = "امنیت، DNS و محدودیت نشست‌ها"
+    d = page_chrome("settings", "settings_title", "settings_sub")
     cfg = load_config()
     token = cfg.get("telegram_bot_token") or ""
     d["telegram_bot_set"] = bool(token)
@@ -1533,10 +2206,10 @@ def load_client_template(rel, domain):
 def clients_windows():
     domain = client_domain()
     if not domain:
-        flash("دامنه در تنظیمات نیست.")
+        flash_t("no_domain")
         return redirect(url_for("clients_page"))
     if not (CLIENTS_DIR / "windows" / "Install-IKEv2.ps1").is_file():
-        flash("فایل کلاینت ویندوز روی سرور نیست.")
+        flash_t("no_win_client")
         return redirect(url_for("clients_page"))
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
@@ -1719,7 +2392,7 @@ def clients_ss(name):
     users = load_users()
     u = users.get(name)
     if not u or not u.get("ss_enabled"):
-        flash("Shadowsocks برای این کاربر فعال نیست.")
+        flash_t("ss_off")
         return redirect(url_for("clients_page"))
     cfg = load_config()
     uri = ss_uri(name, u, cfg)
@@ -1995,7 +2668,7 @@ def clients_sub(name):
         users = load_users()
         u = users.get(name)
         if not u:
-            flash("کاربر پیدا نشد.")
+            flash_t("user_missing")
             return redirect(url_for("clients_page"))
         token = ensure_sub_token(users, name)
     cfg = load_config()
@@ -2059,6 +2732,7 @@ def api_status():
             "net_down_h": d["net_down_h"],
             "net_up_h": d["net_up_h"],
             "now_fa": d["now_fa"],
+            "now": d["now"],
         }
     )
 
@@ -2066,11 +2740,14 @@ def api_status():
 @app.route("/users/add", methods=["POST"])
 @login_required
 @csrf_required
+
 def users_add():
     name = (request.form.get("name") or "").strip()
     password = (request.form.get("password") or "").strip()
     expires = (request.form.get("expires") or "").strip()
     quota = (request.form.get("quota_gb") or "0").strip() or "0"
+    ikev2_enabled = request.form.get("ikev2_enabled") == "1"
+    l2tp_enabled = request.form.get("l2tp_enabled") == "1"
     ss_enabled = request.form.get("ss_enabled") == "1"
     hy_enabled = request.form.get("hy_enabled") == "1"
     vless_enabled = request.form.get("vless_enabled") == "1"
@@ -2078,28 +2755,28 @@ def users_add():
     http_enabled = request.form.get("http_enabled") == "1"
     mtg_enabled = request.form.get("mtg_enabled") == "1" or request.form.get("mtp") == "1"
     if not USER_RE.match(name):
-        flash("نام کاربری فقط حروف انگلیسی و عدد، ۲ تا ۳۲ نویسه.")
+        flash_t("user_name_bad")
         return redirect(url_for("users_page"))
-    if not safe_secret(password, 12, 128):
-        flash("رمز VPN باید ۱۲ تا ۶۴ نویسه و فقط شامل نویسه‌های امن انگلیسی باشد.")
+    if not vpn_password_ok(password):
+        flash_t("vpn_pass_bad")
         return redirect(url_for("users_page"))
     if expires:
         try:
             date.fromisoformat(expires)
         except ValueError:
-            flash("تاریخ انقضا نامعتبر است.")
+            flash_t("expires_bad")
             return redirect(url_for("users_page"))
     try:
         q = float(quota)
         if not math.isfinite(q) or q < 0:
             raise ValueError()
     except ValueError:
-        flash("حجم باید عدد باشد (۰ = نامحدود).")
+        flash_t("quota_bad")
         return redirect(url_for("users_page"))
     with _lock:
         users = load_users()
         if name in users:
-            flash("این کاربر از قبل وجود دارد.")
+            flash_t("user_exists")
             return redirect(url_for("users_page"))
         users[name] = {
             "password": password,
@@ -2108,6 +2785,8 @@ def users_add():
             "used_bytes": 0,
             "created": today_iso(),
             "enabled": True,
+            "ikev2_enabled": ikev2_enabled,
+            "l2tp_enabled": l2tp_enabled,
             "ss_enabled": ss_enabled,
             "hy_enabled": hy_enabled,
             "vless_enabled": vless_enabled,
@@ -2126,6 +2805,10 @@ def users_add():
         write_hysteria_config(users)
         write_mtg_config(users)
     proto_note = []
+    if ikev2_enabled:
+        proto_note.append("IKEv2")
+    if l2tp_enabled:
+        proto_note.append("L2TP")
     if ss_enabled:
         proto_note.append("Shadowsocks")
     if vless_enabled:
@@ -2138,20 +2821,20 @@ def users_add():
         proto_note.append("HTTP")
     if mtg_enabled:
         proto_note.append("MTProto")
-    label = " + ".join(["IKEv2"] + proto_note)
-    flash("کاربر %s اضافه شد (%s)." % (name, label))
+    label = " + ".join(proto_note) if proto_note else "—"
+    flash_t("user_added", name=name, label=label)
     return redirect(url_for("users_page"))
 
 
-@app.route("/users/update", methods=["POST"])
-@login_required
-@csrf_required
+
 def users_update():
     name = (request.form.get("name") or "").strip()
     password = (request.form.get("password") or "").strip()
     expires = (request.form.get("expires") or "").strip()
     quota = (request.form.get("quota_gb") or "").strip()
     reset = request.form.get("reset_traffic") == "1"
+    ikev2_enabled = request.form.get("ikev2_enabled") == "1"
+    l2tp_enabled = request.form.get("l2tp_enabled") == "1"
     ss_enabled = request.form.get("ss_enabled") == "1"
     hy_enabled = request.form.get("hy_enabled") == "1"
     vless_enabled = request.form.get("vless_enabled") == "1"
@@ -2159,23 +2842,23 @@ def users_update():
     http_enabled = request.form.get("http_enabled") == "1"
     mtg_enabled = request.form.get("mtg_enabled") == "1" or request.form.get("mtp") == "1"
     if not USER_RE.match(name):
-        flash("نام کاربری نامعتبر است.")
+        flash_t("user_bad")
         return redirect(url_for("users_page"))
     with _lock:
         users = load_users()
         if name not in users:
-            flash("کاربر پیدا نشد.")
+            flash_t("user_missing")
             return redirect(url_for("users_page"))
         if password:
-            if not safe_secret(password, 12, 128):
-                flash("رمز عبور نامعتبر است.")
+            if not vpn_password_ok(password):
+                flash_t("vpn_pass_bad")
                 return redirect(url_for("users_page"))
             users[name]["password"] = password
         if expires:
             try:
                 date.fromisoformat(expires)
             except ValueError:
-                flash("تاریخ انقضا نامعتبر است.")
+                flash_t("expires_bad")
                 return redirect(url_for("users_page"))
         users[name]["expires"] = expires
         if quota != "":
@@ -2185,10 +2868,12 @@ def users_update():
                     raise ValueError()
                 users[name]["quota_gb"] = q
             except ValueError:
-                flash("حجم نامعتبر است.")
+                flash_t("quota_invalid")
                 return redirect(url_for("users_page"))
         if reset:
             users[name]["used_bytes"] = 0
+        users[name]["ikev2_enabled"] = ikev2_enabled
+        users[name]["l2tp_enabled"] = l2tp_enabled
         users[name]["ss_enabled"] = ss_enabled
         users[name]["hy_enabled"] = hy_enabled
         users[name]["vless_enabled"] = vless_enabled
@@ -2208,17 +2893,14 @@ def users_update():
         write_xray_ss_config(users)
         write_hysteria_config(users)
         write_mtg_config(users)
-    flash("تنظیمات کاربر %s ذخیره شد." % name)
+    flash_t("user_saved", name=name)
     return redirect(url_for("users_page"))
 
 
-@app.route("/users/delete", methods=["POST"])
-@login_required
-@csrf_required
 def users_delete():
     name = (request.form.get("name") or "").strip()
     if not USER_RE.match(name):
-        flash("نام کاربری نامعتبر است.")
+        flash_t("user_bad")
         return redirect(url_for("users_page"))
     with _lock:
         users = load_users()
@@ -2231,7 +2913,7 @@ def users_delete():
         write_xray_ss_config(users)
         write_hysteria_config(users)
         write_mtg_config(users)
-    flash("کاربر %s حذف شد." % name)
+    flash_t("user_deleted", name=name)
     return redirect(url_for("users_page"))
 
 
@@ -2241,9 +2923,9 @@ def users_delete():
 def sessions_cleanup():
     terminated = cleanup_excess_sessions()
     if terminated:
-        flash("%s نشست قدیمی برای بسته‌شدن علامت‌گذاری شد." % fa(len(terminated)))
+        flash_t("old_marked", n=fa(len(terminated)) if current_lang()=="fa" else len(terminated))
     else:
-        flash("نشست اضافه‌ای پیدا نشد.")
+        flash_t("no_extra_sess")
     return redirect(url_for("sessions_page"))
 
 
@@ -2253,7 +2935,7 @@ def sessions_cleanup():
 def sessions_delete():
     session_id = (request.form.get("id") or "").strip()
     if not session_id.isdigit():
-        flash("شناسهٔ نشست نامعتبر است.")
+        flash_t("sess_id_bad")
         return redirect(url_for("sessions_page"))
     selected = next(
         (
@@ -2264,10 +2946,10 @@ def sessions_delete():
         None,
     )
     if not selected:
-        flash("نشست پیدا نشد یا قبلاً بسته شده است.")
+        flash_t("sess_missing")
         return redirect(url_for("sessions_page"))
     terminate_ike_session(selected)
-    flash("نشست %s برای بسته‌شدن علامت‌گذاری شد." % fa(session_id))
+    flash_t("sess_marked", id=fa(session_id) if current_lang()=="fa" else session_id)
     return redirect(url_for("sessions_page"))
 
 
@@ -2277,7 +2959,7 @@ def sessions_delete():
 def settings_domain():
     domain = (request.form.get("domain") or "").strip().lower()
     if not DOMAIN_RE.match(domain):
-        flash("دامنه نامعتبر است.")
+        flash_t("domain_bad")
         return redirect(url_for("settings"))
     with _lock:
         cfg = load_config()
@@ -2291,13 +2973,10 @@ def settings_domain():
         write_hysteria_config()
         write_mtg_config()
     if ssl_ok:
-        flash("دامنه IKEv2 / L2TP به %s تغییر کرد و گواهی SSL به‌روز شد." % domain)
+        flash_t("domain_ssl_ok", domain=domain)
     else:
         extra = (" " + ssl_note) if ssl_note else ""
-        flash(
-            "دامنه %s ذخیره شد اما صدور گواهی SSL ناموفق بود؛ "
-            "باید گواهی Let's Encrypt برای این دامنه صادر شود.%s" % (domain, extra)
-        )
+        flash_t("domain_ssl_fail", domain=domain, extra=extra)
     return redirect(url_for("settings"))
 
 
@@ -2307,14 +2986,14 @@ def settings_domain():
 def settings_psk():
     psk = (request.form.get("psk") or "").strip()
     if not safe_secret(psk, 16, 128):
-        flash("کلید مشترک باید ۱۶ تا ۱۲۸ نویسه و فقط شامل نویسه‌های امن انگلیسی باشد.")
+        flash_t("psk_bad")
         return redirect(url_for("settings"))
     with _lock:
         cfg = load_config()
         cfg["psk"] = psk
         save_config(cfg)
         write_secrets(load_users(), psk=psk)
-    flash("کلید مشترک (PSK) عوض شد. کلاینت‌های L2TP باید PSK جدید بزنند.")
+    flash_t("psk_ok")
     return redirect(url_for("settings"))
 
 
@@ -2325,12 +3004,12 @@ def settings_dns():
     raw = (request.form.get("dns") or "").strip()
     parts = [p.strip() for p in re.split(r"[, ]+", raw) if p.strip()]
     if not parts or len(parts) > 4:
-        flash("یک تا چهار DNS وارد کنید.")
+        flash_t("dns_count")
         return redirect(url_for("settings"))
     try:
         parts = [str(ipaddress.ip_address(p)) for p in parts]
     except ValueError:
-        flash("DNS باید یک آدرس IPv4 یا IPv6 معتبر باشد.")
+        flash_t("dns_bad")
         return redirect(url_for("settings"))
     cfg = load_config()
     cfg["dns"] = parts
@@ -2346,7 +3025,7 @@ def settings_dns():
         conf = re.sub(r"rightdns=.*", "rightdns=" + ",".join(parts[:2]), conf)
         IPSEC_CONF.write_text(conf, encoding="utf-8")
         run(["ipsec", "reload"])
-    flash("DNS ذخیره شد. اتصال‌های بعدی با DNS جدید می‌آیند.")
+    flash_t("dns_ok")
     return redirect(url_for("settings"))
 
 
@@ -2356,12 +3035,12 @@ def settings_dns():
 def settings_admin():
     pw = (request.form.get("password") or "").strip()
     if len(pw) < 12 or len(pw) > 128:
-        flash("رمز پنل باید ۱۲ تا ۱۲۸ نویسه باشد.")
+        flash_t("admin_len")
         return redirect(url_for("settings"))
     data = load_admin()
     data["password"] = generate_password_hash(pw)
     save_admin(data)
-    flash("رمز ورود پنل عوض شد.")
+    flash_t("admin_ok")
     return redirect(url_for("settings"))
 
 
@@ -2375,7 +3054,7 @@ def settings_profile():
     data["display_name"] = display_name
     data["contact"] = contact
     save_admin(data)
-    flash("پروفایل ذخیره شد.")
+    flash_t("profile_ok")
     return redirect(url_for("settings"))
 
 
@@ -2389,7 +3068,7 @@ def settings_sessions():
         if not 1 <= limit <= 10:
             raise ValueError()
     except ValueError:
-        flash("تعداد نشست هم‌زمان باید بین ۱ تا ۱۰ باشد.")
+        flash_t("sess_limit_bad")
         return redirect(url_for("settings"))
     with _lock:
         cfg = load_config()
@@ -2397,9 +3076,9 @@ def settings_sessions():
         save_config(cfg)
         terminated = cleanup_excess_sessions()
     if terminated:
-        flash("محدودیت ذخیره شد و %s نشست قدیمی بسته شد." % fa(len(terminated)))
+        flash_t("sess_limit_cut", n=fa(len(terminated)) if current_lang()=="fa" else len(terminated))
     else:
-        flash("محدودیت نشست‌های هم‌زمان ذخیره شد.")
+        flash_t("sess_limit_ok")
     return redirect(url_for("settings"))
 
 
@@ -2410,18 +3089,18 @@ def settings_telegram():
     token = (request.form.get("telegram_bot_token") or "").strip()
     ids_raw = (request.form.get("telegram_admin_ids") or "").strip()
     if token and not re.fullmatch(r"\d+:[A-Za-z0-9_-]{30,50}", token):
-        flash("توکن ربات تلگرام نامعتبر است.")
+        flash_t("tg_token_bad")
         return redirect(url_for("settings"))
     admin_ids = []
     for part in re.split(r"[,\s]+", ids_raw):
         if not part:
             continue
         if not part.isdigit():
-            flash("آیدی عددی تلگرام نامعتبر است: %s" % part)
+            flash_t("tg_id_bad", part=part)
             return redirect(url_for("settings"))
         admin_ids.append(int(part))
     if token and not admin_ids:
-        flash("برای فعال‌کردن ربات باید حداقل یک آیدی عددی ادمین وارد کنید.")
+        flash_t("tg_need_admin")
         return redirect(url_for("settings"))
     with _lock:
         cfg = load_config()
@@ -2430,10 +3109,10 @@ def settings_telegram():
         save_config(cfg)
     if token:
         run(["systemctl", "restart", "panel-telegram-bot"], timeout=15)
-        flash("تنظیمات ربات تلگرام ذخیره و ربات ری‌استارت شد.")
+        flash_t("tg_ok")
     else:
         run(["systemctl", "stop", "panel-telegram-bot"], timeout=15)
-        flash("ربات تلگرام غیرفعال شد.")
+        flash_t("tg_off")
     return redirect(url_for("settings"))
 
 
@@ -2468,15 +3147,184 @@ def apply_update():
     return "panel restarted OK" in out, out
 
 
+
+def read_unit_log(unit, lines=200):
+    if unit not in LOG_UNITS:
+        return ""
+    try:
+        n = max(1, min(int(lines), 500))
+    except (TypeError, ValueError):
+        n = 200
+    try:
+        proc = subprocess.run(
+            ["journalctl", "-u", unit, "-n", str(n), "--no-pager", "--output=short-iso"],
+            capture_output=True,
+            text=True,
+            timeout=8,
+        )
+        out = (proc.stdout or "") + (proc.stderr or "")
+        return out[-80000:]
+    except Exception as e:
+        return str(e)
+
+
+def _backup_ok_name(name):
+    name = (name or "").replace("\\", "/").lstrip("/")
+    if not name or ".." in name.split("/"):
+        return False
+    base = Path(name).name
+    if base in ("users.json", "config.json", "traffic-snap.json"):
+        return True
+    return bool(re.fullmatch(r"traffic[-_][A-Za-z0-9._-]+\.json", base))
+
+
+@app.route("/settings/theme", methods=["POST"])
+@csrf_required
+def settings_theme():
+    theme = (request.form.get("theme") or "").strip()
+    if theme not in ("dark", "light"):
+        theme = "light" if current_theme() == "dark" else "dark"
+    if session.get("ok"):
+        with _lock:
+            cfg = load_config()
+            cfg["theme"] = theme
+            save_config(cfg)
+    dest = request.referrer or (url_for("index") if session.get("ok") else url_for("login"))
+    return set_ui_cookies(redirect(dest), theme=theme)
+
+
+@app.route("/settings/lang", methods=["POST"])
+@csrf_required
+def settings_lang():
+    lang = (request.form.get("lang") or "").strip()
+    if lang not in ("fa", "en"):
+        lang = "en" if current_lang() == "fa" else "fa"
+    if session.get("ok"):
+        with _lock:
+            cfg = load_config()
+            cfg["lang"] = lang
+            save_config(cfg)
+    dest = request.referrer or (url_for("index") if session.get("ok") else url_for("login"))
+    return set_ui_cookies(redirect(dest), lang=lang)
+
+
+@app.route("/settings/restart", methods=["POST"])
+@login_required
+@csrf_required
+def settings_restart():
+    def later():
+        time.sleep(1)
+        run(["systemctl", "restart", "ikev2-l2tp-gui"], timeout=30)
+
+    threading.Thread(target=later, daemon=True).start()
+    flash_t("restart_ok")
+    return redirect(request.referrer or url_for("settings"))
+
+
+@app.route("/logs")
+@login_required
+def logs_page():
+    d = page_chrome("logs", "logs_title", "logs_sub")
+    d["log_blocks"] = [{"unit": unit, "text": read_unit_log(unit)} for unit in LOG_UNITS]
+    return render_template("logs.html", **d)
+
+
+@app.route("/settings/backup")
+@login_required
+def settings_backup():
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        if USERS_FILE.is_file():
+            z.write(USERS_FILE, arcname="users.json")
+        seen = {"users.json"}
+        if DATA_DIR.is_dir():
+            for path in sorted(DATA_DIR.glob("traffic*.json")):
+                if path.name in seen:
+                    continue
+                z.write(path, arcname=path.name)
+                seen.add(path.name)
+        if CONFIG_FILE.is_file():
+            z.write(CONFIG_FILE, arcname="config.json")
+    buf.seek(0)
+    stamp = now_tehran().strftime("%Y%m%d")
+    return send_file(
+        buf,
+        mimetype="application/zip",
+        as_attachment=True,
+        download_name="nh-multivpn-backup-%s.zip" % stamp,
+    )
+
+
+@app.route("/settings/restore", methods=["POST"])
+@login_required
+@csrf_required
+def settings_restore():
+    upload = request.files.get("backup")
+    if not upload or not upload.filename:
+        flash_t("backup_missing")
+        return redirect(url_for("settings"))
+    raw = upload.read()
+    try:
+        zf = zipfile.ZipFile(io.BytesIO(raw))
+    except zipfile.BadZipFile:
+        flash_t("backup_bad")
+        return redirect(url_for("settings"))
+    names = zf.namelist()
+    if not names or any(not _backup_ok_name(n) for n in names):
+        flash_t("backup_bad")
+        return redirect(url_for("settings"))
+    extracted = {}
+    try:
+        for n in names:
+            base = Path(n.replace("\\", "/")).name
+            data = zf.read(n)
+            extracted[base] = data
+        if "users.json" in extracted:
+            users = json.loads(extracted["users.json"].decode("utf-8"))
+            if not isinstance(users, dict):
+                raise ValueError("users")
+            for k, v in users.items():
+                if not USER_RE.match(str(k)) or not isinstance(v, dict):
+                    raise ValueError("user")
+        if "config.json" in extracted:
+            cfg = json.loads(extracted["config.json"].decode("utf-8"))
+            if not isinstance(cfg, dict):
+                raise ValueError("config")
+    except (UnicodeDecodeError, json.JSONDecodeError, ValueError, KeyError):
+        flash_t("backup_bad")
+        return redirect(url_for("settings"))
+    with _lock:
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        CFG_DIR.mkdir(parents=True, exist_ok=True)
+        if "users.json" in extracted:
+            USERS_FILE.write_bytes(extracted["users.json"])
+            os.chmod(USERS_FILE, 0o600)
+        for base, data in extracted.items():
+            if base in ("users.json", "config.json"):
+                continue
+            dest = DATA_DIR / base
+            dest.write_bytes(data)
+            os.chmod(dest, 0o600)
+        if "config.json" in extracted:
+            CONFIG_FILE.write_bytes(extracted["config.json"])
+            os.chmod(CONFIG_FILE, 0o600)
+        write_secrets()
+        write_xray_ss_config()
+        write_hysteria_config()
+        write_mtg_config()
+    flash_t("backup_ok")
+    return redirect(url_for("settings"))
+
+
 @app.route("/settings/update/apply", methods=["POST"])
 @login_required
 @csrf_required
 def settings_update_apply():
     ok, out = apply_update()
     if ok:
-        flash("پنل به‌روزرسانی شد و ری‌استارت شد.")
+        flash_t("upd_ok")
     else:
-        flash("به‌روزرسانی ناموفق بود. جزئیات: %s" % out[-400:])
+        flash_t("upd_fail", out=out[-400:])
     return redirect(url_for("settings"))
 
 

@@ -1,5 +1,9 @@
 'use strict';
 
+function uiText(key, fallback) {
+  return document.body.getAttribute('data-' + key) || fallback;
+}
+
 function copyValue(el) {
   const value = 'value' in el && el.tagName === 'INPUT' ? el.value : el.textContent.trim();
   const done = () => flashCopied(el);
@@ -32,7 +36,7 @@ function flashCopied(el) {
   const rect = el.getBoundingClientRect();
   const badge = document.createElement('span');
   badge.className = 'copied-badge';
-  badge.textContent = 'کپی شد ✓';
+  badge.textContent = uiText('copied', 'Copied');
   document.body.append(badge);
   badge.style.left = Math.round(rect.left + rect.width / 2) + 'px';
   badge.style.top = Math.round(rect.top) + 'px';
@@ -56,7 +60,20 @@ function closeDialog(dialog) {
   if (dialog && dialog.open) dialog.close();
 }
 
+function setSidebar(open) {
+  document.body.classList.toggle('sidebar-open', open);
+  const backdrop = document.querySelector('[data-sidebar-backdrop]');
+  if (backdrop) backdrop.hidden = !open;
+}
+
 document.addEventListener('click', event => {
+  if (event.target.closest('[data-sidebar-toggle]')) {
+    setSidebar(!document.body.classList.contains('sidebar-open'));
+  }
+  if (event.target.closest('[data-sidebar-backdrop]')) {
+    setSidebar(false);
+  }
+
   const closeButton = event.target.closest('[data-dialog-close]');
   if (closeButton) closeDialog(closeButton.closest('dialog'));
 
@@ -65,8 +82,8 @@ document.addEventListener('click', event => {
     const input = toggle.parentElement.querySelector('input');
     const show = input.type === 'password';
     input.type = show ? 'text' : 'password';
-    toggle.textContent = show ? 'پنهان' : 'نمایش';
-    toggle.setAttribute('aria-label', show ? 'پنهان کردن رمز' : 'نمایش رمز');
+    toggle.textContent = show ? uiText('hide-pass', 'Hide') : uiText('show-pass', 'Show');
+    toggle.setAttribute('aria-label', toggle.textContent);
   }
 
   const editButton = event.target.closest('.edit-user-button');
@@ -76,6 +93,10 @@ document.addEventListener('click', event => {
     document.getElementById('edit-user-label').textContent = editButton.dataset.user;
     document.getElementById('edit-user-expires').value = editButton.dataset.expires;
     document.getElementById('edit-user-quota').value = editButton.dataset.quota;
+    const ike = document.getElementById('edit-user-ikev2');
+    const l2 = document.getElementById('edit-user-l2tp');
+    if (ike) ike.checked = editButton.dataset.ikev2 !== '0';
+    if (l2) l2.checked = editButton.dataset.l2tp !== '0';
     document.getElementById('edit-user-ss').checked = editButton.dataset.ss === '1';
     document.getElementById('edit-user-hy').checked = editButton.dataset.hy === '1';
     document.getElementById('edit-user-vless').checked = editButton.dataset.vless === '1';
@@ -102,7 +123,7 @@ document.addEventListener('submit', event => {
   if (form.dataset.confirm && form.dataset.confirmed !== 'true') {
     event.preventDefault();
     const dialog = document.getElementById('confirm-dialog');
-    document.getElementById('confirm-title').textContent = form.dataset.confirmTitle || 'تأیید عملیات';
+    document.getElementById('confirm-title').textContent = form.dataset.confirmTitle || '';
     document.getElementById('confirm-message').textContent = form.dataset.confirm;
     dialog.returnValue = '';
     dialog.showModal();
@@ -120,7 +141,7 @@ document.addEventListener('submit', event => {
   submitter.disabled = true;
   submitter.classList.add('is-loading');
   submitter.dataset.originalText = submitter.textContent;
-  submitter.textContent = 'در حال انجام…';
+  submitter.textContent = uiText('working', '…');
   form.setAttribute('aria-busy', 'true');
 });
 

@@ -2,8 +2,22 @@
 # IKEv2 GUI installer
 set -euo pipefail
 
+if [[ -t 1 ]]; then
+  C_HDR=$'\033[1;33m'
+  C_OK=$'\033[0;32m'
+  C_ERR=$'\033[1;31m'
+  C_DIM=$'\033[2m'
+  C_RST=$'\033[0m'
+else
+  C_HDR=; C_OK=; C_ERR=; C_DIM=; C_RST=
+fi
+hdr() { printf '%s%s%s\n' "$C_HDR" "$*" "$C_RST"; }
+ok() { printf '%s%s%s\n' "$C_OK" "$*" "$C_RST"; }
+err() { printf '%s%s%s\n' "$C_ERR" "$*" "$C_RST" >&2; }
+hint() { printf '%s%s%s\n' "$C_DIM" "$*" "$C_RST"; }
+
 if [[ ${EUID:-$(id -u)} -ne 0 ]]; then
-  echo "in script bayad ba root ejra beshe: sudo bash install.sh"
+  err "in script bayad ba root ejra beshe: sudo bash install.sh"
   exit 1
 fi
 
@@ -17,6 +31,14 @@ BACKUP_ROOT="/var/backups/ikev2-l2tp-gui"
 valid_domain() { [[ "$1" =~ ^([A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,63}$ ]]; }
 valid_ip() { python3 -c 'import ipaddress,sys; ipaddress.ip_address(sys.argv[1])' "$1" >/dev/null 2>&1; }
 valid_secret() { [[ "$1" =~ ^[A-Za-z0-9._~!@#%^\&*+=,:\;?/-]{12,128}$ ]]; }
+valid_vpn_pass() {
+  local s="$1" n=${#1}
+  (( n >= 1 && n <= 128 )) || return 1
+  case "$s" in
+    *'"'*|*$'\\'*|*$'\n'*|*$'\r'*) return 1 ;;
+  esac
+  return 0
+}
 backup_file() {
   local file="$1"
   [[ -e "$file" ]] || return 0
@@ -68,6 +90,7 @@ need=(
   "$SCRIPT_DIR/panel/templates/sessions.html"
   "$SCRIPT_DIR/panel/templates/clients.html"
   "$SCRIPT_DIR/panel/templates/settings.html"
+  "$SCRIPT_DIR/panel/templates/logs.html"
   "$SCRIPT_DIR/panel/static/style.css"
   "$SCRIPT_DIR/panel/static/dashboard.js"
   "$SCRIPT_DIR/panel/ikev2-l2tp-gui.service"
@@ -83,24 +106,24 @@ need=(
 )
 for f in "${need[@]}"; do
   if [[ ! -f "$f" ]]; then
-    echo "missing file: $f"
+    err "missing file: $f"
     exit 1
   fi
 done
 
 if [[ "${EXTRA_ONLY:-}" == "1" ]]; then
   echo
-  echo "=========================================="
-  echo "   extra protocols (xray / hysteria / mtg)"
-  echo "=========================================="
+  hdr "=========================================="
+  hdr "   extra protocols (xray / hysteria / mtg)"
+  hdr "=========================================="
   echo
   # Skip domain/SSL/ipsec/nginx. Jump to binary+unit+ufw provisioning below.
 else
 
 echo
-echo "=========================================="
-echo "   IKEv2 GUI  —  installer"
-echo "=========================================="
+hdr "=========================================="
+hdr "   IKEv2 GUI  —  installer"
+hdr "=========================================="
 echo
 
 PUB_GUESS="$(curl -4 -fsS --max-time 8 https://ifconfig.me 2>/dev/null || hostname -I | awk '{print $1}')"
@@ -124,28 +147,28 @@ if [[ -n "$VPN_USER" && -z "$VPN_PASS" ]]; then
 fi
 
 if [[ -z "$DOMAIN" || -z "$PUBLIC_IP" || -z "$PSK" || -z "$PANEL_USER" || -z "$PANEL_PASS" ]]; then
-  echo "domain, IP, PSK, user/pass panel lazeman por bashan."
+  err "domain, IP, PSK, user/pass panel lazeman por bashan."
   exit 1
 fi
 if ! valid_domain "$DOMAIN"; then
-  echo "domain namotabar ast."
+  err "domain namotabar ast."
   exit 1
 fi
 if ! valid_ip "$PUBLIC_IP"; then
-  echo "IP namotabar ast."
+  err "IP namotabar ast."
   exit 1
 fi
-if ! valid_secret "$PSK" || { [[ -n "$VPN_USER" ]] && ! valid_secret "$VPN_PASS"; }; then
-  echo "PSK va password VPN bayad 12-128 character va faghat az character haye امن bashand."
+if ! valid_secret "$PSK" || { [[ -n "$VPN_USER" ]] && ! valid_vpn_pass "$VPN_PASS"; }; then
+  err "PSK 12-128 english-safe; VPN pass 1-128 (no quote/backslash/newline)."
   exit 1
 fi
 if [[ "$PANEL_USER" =~ [^A-Za-z0-9._-] || ${#PANEL_USER} -lt 2 || ${#PANEL_USER} -gt 32 || ${#PANEL_PASS} -lt 12 || ${#PANEL_PASS} -gt 128 ]]; then
-  echo "user/password panel namotabar ast (password: 12-128 character)."
+  err "user/password panel namotabar ast (password: 12-128 character)."
   exit 1
 fi
 
 echo
-echo "Nasb package ha..."
+hdr "Nasb package ha..."
 apt-get update -y
 apt-get install -y \
   strongswan strongswan-pki libcharon-extra-plugins libstrongswan-extra-plugins \
@@ -175,7 +198,7 @@ for f in /etc/strongswan.d/charon/forecast.conf /etc/strongswan.d/charon/farp.co
   fi
 done
 
-echo "SSL (Let's Encrypt)..."
+hdr "SSL (Let's Encrypt)..."
 HAVE_SSL=0
 systemctl stop nginx 2>/dev/null || true
 CERT_MAIL=(--register-unsafely-without-email)
@@ -211,11 +234,11 @@ EOF
       printf '\nwebroot_path = /var/www/html\n' >> "/etc/letsencrypt/renewal/${DOMAIN}.conf"
   fi
 else
-  echo "certificate motabar sakhte nashod; nasb baraye hefz amniat motavaqef shod."
+  err "certificate motabar sakhte nashod; nasb baraye hefz amniat motavaqef shod."
   exit 1
 fi
 
-echo "Config IPsec / L2TP..."
+hdr "Config IPsec / L2TP..."
 cat >/etc/ipsec.conf << EOF
 config setup
   uniqueids=no
@@ -612,7 +635,7 @@ if [[ "${EXTRA_ONLY:-}" == "1" ]]; then
   if [[ -f /etc/systemd/system/panel-hysteria.service ]]; then
     systemctl enable panel-hysteria >/dev/null || true
   fi
-  echo "extra protocols OK (xl2tpd/nginx/panel dast nazadim)"
+  ok "extra protocols OK (xl2tpd/nginx/panel dast nazadim)"
   exit 0
 fi
 
@@ -652,17 +675,17 @@ print("clients stamped")
 PY
 
 echo
-echo "=========================================="
+hdr "=========================================="
 
 if [[ -f "$SCRIPT_DIR/scripts/multivpn" ]]; then
   install -m 0755 "$SCRIPT_DIR/scripts/multivpn" /usr/local/bin/multivpn
 fi
 
-echo "Nasb tamom shod."
-echo "Panel:   https://${DOMAIN}"
+ok "Nasb tamom shod."
+ok "Panel:   https://${DOMAIN}"
 echo "Panel user: ${PANEL_USER}"
 echo "IKEv2:  server + Remote ID = ${DOMAIN}"
 echo "Windows: panel > download zip   ya  ${APP_DIR}/clients/out/Install-IKEv2.bat"
 echo "iOS:     panel > download profile ya  ${APP_DIR}/clients/out/IKEv2.mobileconfig"
 echo "CLI:     sudo multivpn update | status | uninstall"
-echo "=========================================="
+hdr "=========================================="

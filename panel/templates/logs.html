@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="panel">
+  <header class="panel-header"><div><h2>{{ t.logs_title }}</h2><p>{{ t.logs_sub }}</p></div></header>
+  {% for block in log_blocks %}
+  <h3 class="log-unit" dir="ltr">{{ block.unit }}</h3>
+  <pre class="log-pre" dir="ltr">{{ block.text or '—' }}</pre>
+  {% endfor %}
+</section>
+{% endblock %}

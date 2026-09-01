@@ -1,45 +1,45 @@
 {% extends "base.html" %}
 {% block content %}
 <section class="client-grid">
-  <article class="download-card"><div class="platform-icon windows">⊞</div><div class="download-copy"><span class="recommended">پیشنهادی</span><h2>Windows — IKEv2</h2><p>نصب خودکار اتصال IKEv2 همراه ابزار بررسی</p><ul><li>سازگار با Windows 10 و 11</li><li>تنظیم خودکار نام سرور</li><li>بدون ذخیرهٔ رمز کاربر</li></ul></div><a class="primary-button full" href="{{ url_for('clients_windows') }}">دانلود فایل ZIP</a></article>
-  <article class="download-card"><div class="platform-icon apple">●</div><div class="download-copy"><span class="recommended neutral">پروفایل آماده</span><h2>iPhone / iPad — IKEv2</h2><p>پروفایل استاندارد برای اتصال سریع IKEv2</p><ul><li>نصب مستقیم در Settings</li><li>Remote ID از قبل تنظیم شده</li><li>ورود امن نام کاربری و رمز</li></ul></div><a class="secondary-button full" href="{{ url_for('clients_ios') }}">دانلود mobileconfig</a></article>
+  <article class="download-card"><div class="platform-icon windows">⊞</div><div class="download-copy"><span class="recommended">{{ t.recommended }}</span><h2>{{ t.win_title }}</h2><p>{{ t.win_p }}</p><ul><li>Windows 10 / 11</li><li>IKEv2</li></ul></div><a class="primary-button full" href="{{ url_for('clients_windows') }}">{{ t.dl_zip }}</a></article>
+  <article class="download-card"><div class="platform-icon apple">●</div><div class="download-copy"><span class="recommended neutral">{{ t.ready_profile }}</span><h2>{{ t.ios_title }}</h2><p>{{ t.ios_p }}</p></div><a class="secondary-button full" href="{{ url_for('clients_ios') }}">{{ t.dl_mobileconfig }}</a></article>
 </section>
 
 <section class="panel connection-guide">
-  <header class="panel-header"><div><h2>راهنمای اتصال — IKEv2</h2><p>برای هر کاربر NH MultiVPN، IKEv2 همیشه فعال است. یوزر و پس همان حساب پنل.</p></div></header>
+  <header class="panel-header"><div><h2>{{ t.guide_ike }}</h2></div></header>
   <div class="guide-grid">
-    <div><span class="step-number">۱</span><h3>نوع اتصال</h3><p>ویندوز: VPN داخلی، نوع <b>IKEv2</b>. اندروید: اپ <b>strongSwan</b>، نوع <b>IKEv2 EAP</b>. سامسونگ داخلی: <b>IKEv2/IPSec MSCHAPv2</b> — نه PSK و نه RSA.</p></div>
-    <div><span class="step-number">۲</span><h3>آدرس و شناسه</h3><p>Server و Remote ID هر دو:</p><code class="copyable" title="برای کپی کلیک کنید">{{ host }}</code></div>
-    <div><span class="step-number">۳</span><h3>ورود کاربر</h3><p>نام کاربری و رمز حساب ساخته‌شده در پنل. Certificate: None / select automatically.</p></div>
+    <div><span class="step-number">1</span><h3>IKEv2 EAP</h3><p>Windows / strongSwan / Samsung IKEv2 MSCHAPv2.</p></div>
+    <div><span class="step-number">2</span><h3>Server / Remote ID</h3><p><code class="copyable" title="{{ t.copy_title }}">{{ host }}</code></p></div>
+    <div><span class="step-number">3</span><h3>User / pass</h3><p>Certificate: None.</p></div>
   </div>
 </section>
 
 <section class="panel connection-guide">
-  <header class="panel-header"><div><h2>راهنمای اتصال — L2TP</h2><p>همان یوزر و پس IKEv2. کلید مشترک (PSK) را از صفحهٔ تنظیمات بردار — اینجا نشان داده نمی‌شود.</p></div></header>
+  <header class="panel-header"><div><h2>{{ t.guide_l2 }}</h2></div></header>
   <div class="guide-grid">
-    <div><span class="step-number">۱</span><h3>نوع اتصال</h3><p>ویندوز / اندروید: <b>L2TP/IPsec با PSK</b>.</p></div>
-    <div><span class="step-number">۲</span><h3>سرور</h3><p>آدرس سرور:</p><code class="copyable" title="برای کپی کلیک کنید">{{ host }}</code></div>
-    <div><span class="step-number">۳</span><h3>رمزها</h3><p>IPSec secret = PSK تنظیمات. User / pass = حساب پنل. پورت UDP 1701 / 500 / 4500 باید باز باشد.</p></div>
+    <div><span class="step-number">1</span><h3>L2TP/IPsec PSK</h3></div>
+    <div><span class="step-number">2</span><h3>{{ t.server }}</h3><p><code class="copyable" title="{{ t.copy_title }}">{{ host }}</code></p></div>
+    <div><span class="step-number">3</span><h3>PSK</h3></div>
   </div>
 </section>
 
 <section class="panel connection-guide">
-  <header class="panel-header"><div><h2>راهنمای اتصال — VLESS / Shadowsocks / Hysteria2</h2><p>این سه تا اختیاری‌اند. اول در صفحهٔ کاربران تیک پروتکل را بزن، بعد از badge همان ردیف QR یا لینک را بردار.</p></div></header>
+  <header class="panel-header"><div><h2>{{ t.guide_extra }}</h2></div></header>
   <div class="guide-grid">
-    <div><span class="step-number">۱</span><h3>فعال‌سازی</h3><p>کاربران → ویرایش حساب → Shadowsocks / Hysteria2 / VLESS.</p></div>
-    <div><span class="step-number">۲</span><h3>QR یا Sub</h3><p>روی badge <b>SS</b> / <b>Hysteria2</b> / <b>VLESS</b> یا <b>Sub</b> بزن. لینک را در v2rayNG، Hiddify یا NekoBox اسکن/وارد کن.</p></div>
-    <div><span class="step-number">۳</span><h3>اشتراک</h3><p>یک لینک Sub پروتکل‌های این کاربر را با هم به‌روز می‌کند. با کسی به اشتراک نگذار — مخصوص همان کاربر است.</p></div>
+    <div><span class="step-number">1</span><h3>VLESS Reality</h3><p>TCP 8443</p></div>
+    <div><span class="step-number">2</span><h3>Shadowsocks 2022</h3></div>
+    <div><span class="step-number">3</span><h3>Hysteria2</h3><p>UDP 443</p></div>
   </div>
 </section>
 
 <section class="panel connection-guide">
-  <header class="panel-header"><div><h2>راهنمای اتصال — VMess / HTTP / MTProto</h2><p>همین‌طور اختیاری. تیک را در صفحهٔ کاربران بزن، بعد از badge همان ردیف لینک را بردار.</p></div></header>
+  <header class="panel-header"><div><h2>{{ t.guide_more }}</h2></div></header>
   <div class="guide-grid">
-    <div><span class="step-number">۱</span><h3>VMess (WS+TLS)</h3><p>پورت پیش‌فرض ۲۰۵۳، مسیر <code dir="ltr">/vmess</code>، گواهی Let's Encrypt دامنه. در v2rayNG / Hiddify / NekoBox لینک <code dir="ltr">vmess://</code> را وارد کن.</p></div>
-    <div><span class="step-number">۲</span><h3>پروکسی HTTP</h3><p>پورت پیش‌فرض ۱۰۸۰۹. آدرس سرور به‌صورت <code dir="ltr">host:port</code> و همان یوزر/پس پنل. بدون TLS. در تنظیمات پروکسی سیستم یا کلاینت HTTP وارد کن.</p></div>
-    <div><span class="step-number">۳</span><h3>MTProto (تلگرام)</h3><p>پورت پیش‌فرض ۳۱۲۸. لینک <code dir="ltr">tg://proxy</code> را در تلگرام باز کن. یک secret مشترک برای همهٔ کاربران فعال است.</p></div>
+    <div><span class="step-number">1</span><h3>VMess WS+TLS</h3><p>2053 /vmess</p></div>
+    <div><span class="step-number">2</span><h3>HTTP</h3><p>10809</p></div>
+    <div><span class="step-number">3</span><h3>MTProto</h3><p>3128</p></div>
   </div>
 </section>
 
-<section class="panel compact-panel"><div class="android-row"><span class="android-icon">A</span><div><h2>Android — IKEv2</h2><p>برنامه strongSwan VPN Client را نصب کنید؛ نوع اتصال IKEv2 EAP و آدرس سرور را <code class="copyable" title="برای کپی کلیک کنید">{{ host }}</code> قرار دهید. برای VLESS/SS/Hysteria2 از QR صفحهٔ کاربران استفاده کنید، نه از این کارت.</p></div></div></section>
+<section class="panel compact-panel"><div class="android-row"><span class="android-icon">A</span><div><h2>{{ t.android_ike }}</h2><p>strongSwan — IKEv2 EAP — <code class="copyable" title="{{ t.copy_title }}">{{ host }}</code></p></div></div></section>
 {% endblock %}
