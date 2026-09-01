@@ -215,13 +215,12 @@ body.sidebar-open .sidebar-backdrop[hidden]{display:block !important}
 @media(max-width:1100px){
   .topbar-meta > code.copyable{display:none}
 }
-
-.machine-strip{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:10px 14px;margin-bottom:16px;background:var(--surface);backdrop-filter:blur(18px);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
-.machine-strip .ms-ip,.machine-strip .ms-item{display:flex;align-items:baseline;gap:6px;min-width:0}
-.machine-strip small{color:var(--muted);font-size:9px;font-weight:700;white-space:nowrap}
-.machine-strip b,.machine-strip .ms-ip code{font-size:13px;font-weight:800;direction:ltr;color:var(--heading)}
-.ms-speed{display:flex;align-items:center;gap:10px;margin-inline-start:auto;min-width:0}
-.ms-speed button{min-height:32px;padding:4px 12px;font-size:11px;width:auto;margin:0;background:linear-gradient(180deg,#e8c95a,var(--brand));color:var(--on-gold);border:0;border-radius:8px;font-weight:700;cursor:pointer}
+.machine-strip{display:flex;flex-wrap:nowrap;align-items:center;gap:4px 8px;padding:6px 10px;margin-bottom:12px;background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:auto}
+.machine-strip .ms-ip{font-size:12px;font-weight:800;direction:ltr;color:var(--heading);padding-inline-end:6px;border-inline-end:1px solid var(--line)}
+.machine-strip .ms-item{display:inline-flex;align-items:baseline;gap:3px;flex:none}
+.machine-strip small{color:var(--muted);font-size:8px;font-weight:700}
+.machine-strip b{font-size:12px;font-weight:800;direction:ltr;color:var(--heading);font-variant-numeric:tabular-nums}
+.ms-speed{display:inline-flex;align-items:center;gap:6px;flex:none;padding-inline-start:6px;border-inline-start:1px solid var(--line)}
+.ms-speed button{min-height:26px;padding:2px 8px;font-size:10px;width:auto;margin:0;background:linear-gradient(180deg,#e8c95a,var(--brand));color:var(--on-gold);border:0;border-radius:6px;font-weight:700;cursor:pointer;white-space:nowrap}
 .ms-speed button:disabled{opacity:.7}
-#speed-line{font-size:11px;color:var(--heading);direction:ltr;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:min(420px,50vw)}
-@media(max-width:900px){.ms-speed{margin-inline-start:0;width:100%}#speed-line{max-width:100%;white-space:normal}}
+#speed-line{font-size:10px;color:var(--heading);direction:ltr;white-space:nowrap}
