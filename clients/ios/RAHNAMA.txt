@@ -1,6 +1,7 @@
-IKEv2 — iPhone / iPad
-=====================
+IKEv2 + L2TP — iPhone / iPad
+============================
 
+IKEv2 (pishnahadi)
 1) File IKEv2.mobileconfig ra be gushi beresun
    (AirDrop / Telegram / email / Files).
 2) Ruye file tap kon. Payam: Profile Downloaded.
@@ -10,6 +11,13 @@ IKEv2 — iPhone / iPad
 5) Settings > VPN > IKEv2 > Connect
 6) User / pass = hesab-e panel
    Server / Remote ID: __DOMAIN__
+
+L2TP / IPsec
+1) Settings > VPN > Add VPN Configuration > L2TP
+2) Server: __DOMAIN__
+3) Account / Password = haman user panel
+4) Secret = PSK L2TP az Settings panel
+5) Send All Traffic: on
 
 Unsigned profile warning ("Not Signed") normal ast.
 Baraye hazf: Settings > General > VPN & Device Management > Remove Profile
