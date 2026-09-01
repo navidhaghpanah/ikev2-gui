@@ -366,7 +366,10 @@ I18N = {
         "nav_smart": "اتصال هوشمند",
         "smart_title": "اتصال هوشمند",
         "smart_sub": "رتبه‌بندی پروتکل از موجودی VPS و شرایط کلاینت",
-        "smart_intro": "این صفحه اینترنت کلاینت را پروب نمی‌کند — مرورگر نمی‌تواند UDP را تست کند. رتبه از موجودی همین سرور به‌علاوه شرایطی است که وارد می‌کنید؛ باز بودن پورت از ISP ادعا نمی‌شود مگر خودتان در فرم گفته باشید.",
+        "smart_intro": "این صفحه اینترنت کلاینت را پروب نمی‌کند. پیش‌فرض فرم پروفایل فیلترینگ ایران است (با آپدیت پنل عوض می‌شود). رتبه از موجودی همین سرور + فرم + آن پروفایل است؛ باز بودن پورت از ISP ادعا نمی‌شود مگر خودتان در فرم گفته باشید.",
+        "smart_filter": "فیلترینگ",
+        "smart_filter_iran": "ایران (پیش‌فرض، با آپدیت پنل)",
+        "smart_filter_none": "فقط فرم — بدون پروفایل کشور",
         "smart_user": "کاربر",
         "smart_os": "سیستم‌عامل / کلاینت",
         "smart_net": "شبکه",
@@ -721,7 +724,10 @@ I18N = {
         "nav_smart": "Smart Connect",
         "smart_title": "Smart Connect",
         "smart_sub": "Rank the best protocol from VPS inventory and client conditions",
-        "smart_intro": "This page does not probe the client ISP — browsers cannot test UDP. Ranking uses this VPS inventory plus the conditions you enter. A port is not claimed reachable from the client unless the form said so.",
+        "smart_intro": "This page does not probe the client ISP. Form defaults use the Iran filtering profile (ships with panel updates). Ranking is this VPS inventory + the form + that profile. A port is not claimed reachable unless the form said so.",
+        "smart_filter": "Filtering",
+        "smart_filter_iran": "Iran (default, with panel updates)",
+        "smart_filter_none": "Form only — no country profile",
         "smart_user": "User",
         "smart_os": "OS / client",
         "smart_net": "Network",
@@ -2354,10 +2360,11 @@ def smart_page():
     form = {
         "user": names[0] if names else "",
         "os": "android",
-        "net": "unknown",
+        "net": "mobile",
         "udp": "unknown",
         "path": "unknown",
         "native": False,
+        "filter": "iran",
     }
     result = None
     ai_text = ""
@@ -2399,6 +2406,7 @@ def smart_page():
         "net_opts": SMART_NET,
         "udp_opts": SMART_UDP,
         "path_opts": SMART_PATH,
+        "filter_opts": SMART_FILTER,
     }
     return render_template("smart.html", **page_chrome("smart", "smart_title", "smart_sub", extra))
 
@@ -2498,6 +2506,24 @@ SMART_OS = ("windows", "ios", "android", "linux", "mac", "telegram")
 SMART_NET = ("wifi", "mobile", "unknown")
 SMART_UDP = ("ok", "blocked", "unknown")
 SMART_PATH = ("extra_ok", "only443", "unknown")
+SMART_FILTER = ("iran", "none")
+# Score bias only — never a live ISP probe. Bump as_of when the panel ships a new snapshot.
+FILTER_SNAPSHOT = {
+    "iran": {
+        "as_of": "2026-09",
+        "note": "typical nationwide filtering; not a client-ISP probe",
+        "bias": {
+            "ikev2": -22,
+            "l2tp": -28,
+            "hy": 8,
+            "vless": 10,
+            "vmess": -8,
+            "ss": -6,
+            "http": -12,
+            "mtg": 4,
+        },
+    }
+}
 SMART_UNITS = (
     "ikev2-l2tp-gui",
     "strongswan-starter",
@@ -2835,7 +2861,25 @@ def _score_protocol(pid, form, ikev2_on):
     elif pid == "http":
         score = 24 if path == "extra_ok" else 20
         reason = "http_last"
+    score = max(0, min(100, int(score) + _filter_bias(pid, form)))
     return score, reason
+
+
+def _filter_bias(pid, form):
+    """Country snapshot bias. Explicit form answers (udp=ok, extra_ok) override."""
+    if (form.get("filter") or "iran") != "iran":
+        return 0
+    snap = FILTER_SNAPSHOT.get("iran") or {}
+    bias = int((snap.get("bias") or {}).get(pid) or 0)
+    udp = form.get("udp") or "unknown"
+    path = form.get("path") or "unknown"
+    if pid in ("ikev2", "l2tp") and udp == "ok":
+        return 0
+    if pid in ("vmess", "ss", "http") and path == "extra_ok":
+        return 0
+    if pid == "hy" and udp == "blocked":
+        return 0
+    return bias
 
 
 def _smart_uri_and_link(pid, name, u, cfg):
@@ -2921,7 +2965,9 @@ def rank_smart_connect(name, u, cfg, form, lang="fa"):
             "udp": form.get("udp"),
             "path": form.get("path"),
             "native": bool(form.get("native")),
+            "filter": form.get("filter") or "iran",
         },
+        "filter_snapshot": FILTER_SNAPSHOT.get(form.get("filter") or "iran") if (form.get("filter") or "iran") != "none" else None,
         "ranked": top,
         "candidates": candidates,
         "skipped": skipped,
@@ -2937,14 +2983,17 @@ def parse_smart_form(src):
     path = (src.get("path") or "unknown").strip()
     native_raw = src.get("native")
     native = str(native_raw or "").strip() in ("1", "on", "true", "yes")
+    filt = (src.get("filter") or "iran").strip()
     if os_ not in SMART_OS:
-        os_ = "windows"
+        os_ = "android"
     if net not in SMART_NET:
-        net = "unknown"
+        net = "mobile"
     if udp not in SMART_UDP:
         udp = "unknown"
     if path not in SMART_PATH:
         path = "unknown"
+    if filt not in SMART_FILTER:
+        filt = "iran"
     return {
         "user": name,
         "os": os_,
@@ -2952,6 +3001,7 @@ def parse_smart_form(src):
         "udp": udp,
         "path": path,
         "native": native,
+        "filter": filt,
     }
 
 
@@ -3083,10 +3133,12 @@ def smart_ai_review(result, lang):
         ],
         "skipped": result.get("skipped") or [],
         "honest_443": result.get("honest_443"),
+        "filter_snapshot": result.get("filter_snapshot"),
     }
     lang_name = "Persian" if lang == "fa" else "English"
     system = (
         "You review a VPN protocol ranking and MAY change order, scores, or drop items. "
+        "filter_snapshot is a shipped country-filtering bias, not a live ISP probe. "
         "Use ONLY protocol ids from candidates. Never invent protocols, ports, or ISP reachability. "
         "Do not pick skipped ids. Inventory is server-side (listening/configured), not a client probe. "
         "HTTP must not be rank 1 unless it is the only item. "
