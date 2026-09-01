@@ -49,6 +49,7 @@ ADMIN_FILE = CFG_DIR / "admin.json"
 CONFIG_FILE = CFG_DIR / "config.json"
 USERS_FILE = DATA_DIR / "users.json"
 SNAP_FILE = DATA_DIR / "traffic-snap.json"
+SPEED_FILE = DATA_DIR / "speedtest.json"
 IPSEC_SECRETS = Path("/etc/ipsec.secrets")
 CHAP_SECRETS = Path("/etc/ppp/chap-secrets")
 IPSEC_CONF = Path("/etc/ipsec.conf")
@@ -151,6 +152,18 @@ I18N = {
         "up_speed": "↑ سرعت آپلود",
         "rx_total": "کل دانلود از زمان بوت",
         "tx_total": "کل آپلود از زمان بوت",
+        "server_ip": "آی‌پی سرور",
+        "speed_test": "تست سرعت",
+        "speed_test_p": "اینترنت همین VPS را می‌سنجد، نه موبایل یا لپ‌تاپ شما.",
+        "speed_run": "شروع تست سرعت",
+        "speed_running": "در حال تست…",
+        "speed_down": "دانلود",
+        "speed_up": "آپلود",
+        "speed_ping": "پینگ",
+        "speed_fail": "تست سرعت انجام نشد.",
+        "speed_idle": "هنوز تست نشده",
+        "mbps": "مگابیت بر ثانیه",
+        "ms": "ms",
         "quick": "دسترسی سریع",
         "quick_p": "کارهای پرکاربرد مدیریت سرور",
         "quick_add": "ساخت کاربر",
@@ -509,6 +522,18 @@ I18N = {
         "up_speed": "↑ Upload",
         "rx_total": "Total download since boot",
         "tx_total": "Total upload since boot",
+        "server_ip": "Server IP",
+        "speed_test": "Speed test",
+        "speed_test_p": "Measures this VPS uplink, not your phone or laptop.",
+        "speed_run": "Run speed test",
+        "speed_running": "Testing…",
+        "speed_down": "Download",
+        "speed_up": "Upload",
+        "speed_ping": "Ping",
+        "speed_fail": "Speed test failed.",
+        "speed_idle": "Not run yet",
+        "mbps": "Mbps",
+        "ms": "ms",
         "quick": "Quick actions",
         "quick_p": "Common admin tasks",
         "quick_add": "New user",
@@ -2324,6 +2349,8 @@ def dashboard_payload():
         "online_count": len(online),
         "total": len(rows),
         "host": cfg.get("domain") or cfg.get("public_ip") or "",
+        "public_ip": (cfg.get("public_ip") or "").strip() or (cfg.get("domain") or "").strip(),
+        "speed_last": load_speed_last(),
         "dns": ",".join(cfg.get("dns") or []),
         "max_sessions_per_user": max_sessions_per_user(),
         "stats": hs,
@@ -3806,6 +3833,129 @@ def clients_sub_qr(name):
     return (png, 200, {"Content-Type": "image/png", "Cache-Control": "no-store"})
 
 
+
+_SPEED_HOSTS = frozenset(("speed.cloudflare.com", "cachefly.cachefly.net", "proof.ovh.net"))
+_SPEED_DOWN_URLS = (
+    "https://speed.cloudflare.com/__down?bytes=8000000",
+    "https://cachefly.cachefly.net/10mb.test",
+    "https://proof.ovh.net/files/10Mb.dat",
+)
+_SPEED_UP_URL = "https://speed.cloudflare.com/__up"
+_speed_lock = threading.Lock()
+
+
+def load_speed_last():
+    data = load_json(SPEED_FILE, {})
+    return data if isinstance(data, dict) else {}
+
+
+def save_speed_last(data):
+    try:
+        save_json(SPEED_FILE, data)
+    except OSError:
+        pass
+
+
+def _speed_url_ok(url):
+    try:
+        u = urllib.parse.urlparse(url)
+    except ValueError:
+        return False
+    if u.scheme != "https" or u.username or u.password:
+        return False
+    host = (u.hostname or "").lower()
+    if host not in _SPEED_HOSTS:
+        return False
+    if _host_blocked(host):
+        return False
+    return True
+
+
+def _speed_opener():
+    return urllib.request.build_opener(_NoRedirect)
+
+
+def _tcp_ping_ms(host, port=443, timeout=4):
+    t0 = time.perf_counter()
+    try:
+        sock = socket.create_connection((host, port), timeout=timeout)
+        sock.close()
+    except OSError:
+        return None
+    return round((time.perf_counter() - t0) * 1000.0, 1)
+
+
+def _speed_download():
+    opener = _speed_opener()
+    headers = {"User-Agent": "NH-MultiVPN-speedtest", "Accept": "*/*"}
+    for url in _SPEED_DOWN_URLS:
+        if not _speed_url_ok(url):
+            continue
+        host = urllib.parse.urlparse(url).hostname
+        req = urllib.request.Request(url, headers=headers, method="GET")
+        t0 = time.perf_counter()
+        n = 0
+        try:
+            with opener.open(req, timeout=12) as resp:
+                while n < 12 * 1024 * 1024:
+                    chunk = resp.read(64 * 1024)
+                    if not chunk:
+                        break
+                    n += len(chunk)
+        except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, OSError, ValueError):
+            continue
+        dt = time.perf_counter() - t0
+        if n < 64 * 1024 or dt <= 0:
+            continue
+        mbps = (n * 8.0) / dt / 1_000_000.0
+        return {"ok": True, "mbps": round(mbps, 2), "bytes": n, "sec": round(dt, 2), "host": host}
+    return {"ok": False}
+
+
+def _speed_upload():
+    if not _speed_url_ok(_SPEED_UP_URL):
+        return {"ok": False}
+    payload = b"\x00" * (4 * 1024 * 1024)
+    req = urllib.request.Request(
+        _SPEED_UP_URL,
+        data=payload,
+        method="POST",
+        headers={
+            "User-Agent": "NH-MultiVPN-speedtest",
+            "Content-Type": "application/octet-stream",
+        },
+    )
+    t0 = time.perf_counter()
+    try:
+        with _speed_opener().open(req, timeout=12) as resp:
+            resp.read(4096)
+    except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, OSError, ValueError):
+        return {"ok": False}
+    dt = time.perf_counter() - t0
+    if dt <= 0:
+        return {"ok": False}
+    mbps = (len(payload) * 8.0) / dt / 1_000_000.0
+    return {"ok": True, "mbps": round(mbps, 2), "bytes": len(payload), "sec": round(dt, 2)}
+
+
+def run_speed_test():
+    ping = _tcp_ping_ms("speed.cloudflare.com")
+    if ping is None:
+        ping = _tcp_ping_ms("1.0.0.1")
+    down = _speed_download()
+    up = _speed_upload() if down.get("ok") else {"ok": False}
+    result = {
+        "ok": bool(down.get("ok")),
+        "at": now_tehran().strftime("%Y/%m/%d %H:%M"),
+        "ping_ms": ping,
+        "down_mbps": down.get("mbps") if down.get("ok") else None,
+        "up_mbps": up.get("mbps") if up.get("ok") else None,
+    }
+    if result["ok"]:
+        save_speed_last(result)
+    return result
+
+
 @app.route("/api/status")
 @login_required
 def api_status():
@@ -3835,8 +3985,25 @@ def api_status():
             "net_up_h": d["net_up_h"],
             "now_fa": d["now_fa"],
             "now": d["now"],
+            "public_ip": d.get("public_ip") or d.get("host") or "",
         }
     )
+
+
+
+@app.route("/api/speedtest", methods=["POST"])
+@login_required
+@csrf_required
+def api_speedtest():
+    if not _speed_lock.acquire(blocking=False):
+        return jsonify({"ok": False, "error": "busy"}), 429
+    try:
+        result = run_speed_test()
+    finally:
+        _speed_lock.release()
+    if not result.get("ok"):
+        return jsonify(result), 502
+    return jsonify(result)
 
 
 @app.route("/users/add", methods=["POST"])
