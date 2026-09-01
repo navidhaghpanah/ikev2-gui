@@ -95,7 +95,7 @@ function fillSpeedLine(data) {
   const up = data.up_mbps == null ? '—' : data.up_mbps;
   const started = data.started || data.at || '—';
   const ended = data.ended || data.at || '—';
-  line.textContent = '↓ ' + down + ' ' + mbps + ' · ↑ ' + up + ' ' + mbps + ' · ' + startL + ' ' + started + ' → ' + endL + ' ' + ended;
+  line.textContent = '↓ ' + down + ' · ↑ ' + up + ' · ' + startL + ' ' + started + ' → ' + endL + ' ' + ended;
 }
 
 const speedForm = document.getElementById('speed-form');
