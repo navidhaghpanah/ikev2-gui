@@ -1,19 +1,39 @@
 {% extends "base.html" %}
 {% block content %}
 {% macro analog(gid, label, pct, text) -%}
-<figure class="ms-gauge" data-gauge="{{ gid }}" data-pct="{{ pct }}" title="{{ label }}"{% if gid.startswith('speed-') %} data-max="1000"{% endif %}>
-  <svg viewBox="0 0 64 64" aria-hidden="true">
-    <circle class="g-face" cx="32" cy="32" r="30"/>
-    {% for i in range(12) %}
-    <line class="g-tick{% if i % 3 == 0 %} major{% endif %}" x1="32" y1="5" x2="32" y2="{{ 12 if i % 3 == 0 else 9 }}" transform="rotate({{ i * 30 }} 32 32)"/>
+{% set p = [((pct or 0)|float), 100]|min %}
+{% set arc = (p / 100 * 122.52)|round(2) %}
+<figure class="ms-gauge{% if p >= 85 %} hot{% endif %}" data-gauge="{{ gid }}" data-pct="{{ p }}" title="{{ label }}"{% if gid.startswith('speed-') %} data-max="1000"{% endif %}>
+  <svg viewBox="0 0 72 68" aria-hidden="true">
+    <circle class="g-glass" cx="36" cy="34" r="30"/>
+    <circle class="g-track" cx="36" cy="34" r="26" transform="rotate(135 36 34)"/>
+    <circle class="g-arc" cx="36" cy="34" r="26" transform="rotate(135 36 34)" stroke-dasharray="{{ arc }} 200"/>
+    {% for tick in [0, 25, 50, 75, 100] %}
+    <line class="g-tick" x1="36" y1="9" x2="36" y2="13" transform="rotate({{ -135 + tick * 2.7 }} 36 34)"/>
     {% endfor %}
-    <line class="g-hand" x1="32" y1="32" x2="32" y2="12" transform="rotate({{ -135 + ([((pct or 0)|float), 100]|min) * 2.7 }} 32 32)"/>
-    <circle class="g-hub" cx="32" cy="32" r="3.2"/>
+    <g class="g-needle" transform="rotate({{ -135 + p * 2.7 }} 36 34)">
+      <polygon points="36,8 33.2,36 38.8,36"/>
+    </g>
+    <circle class="g-hub" cx="36" cy="34" r="4.4"/>
+    <circle class="g-hub-core" cx="36" cy="34" r="2"/>
   </svg>
   <figcaption><small>{{ label }}</small><b id="stat-{{ gid }}">{{ text }}</b></figcaption>
 </figure>
 {%- endmacro %}
 <section class="machine-strip" id="machine-strip">
+  <svg class="ms-defs" width="0" height="0" aria-hidden="true">
+    <defs>
+      <linearGradient id="g-gold" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#f6e7a2"/>
+        <stop offset="55%" stop-color="#e8c95a"/>
+        <stop offset="100%" stop-color="#b8860b"/>
+      </linearGradient>
+      <linearGradient id="g-hot" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#ffd36a"/>
+        <stop offset="100%" stop-color="#e85a6a"/>
+      </linearGradient>
+    </defs>
+  </svg>
   <code class="copyable ms-ip" id="server-ip" title="{{ t.copy_title }}">{{ public_ip or host or '—' }}</code>
   {{ analog('cpu', t.cpu, stats.cpu, cpu_fa ~ '٪') }}
   {{ analog('ram', t.ram, stats.mem_pct, mem_fa ~ '٪') }}
@@ -29,8 +49,8 @@
     {% set spd = speed_last or {} %}
     {% set down = (spd.down_mbps or 0)|float %}
     {% set up = (spd.up_mbps or 0)|float %}
-    {{ analog('speed-down', '↓', [down / 10, 100]|min, (spd.down_mbps if spd.down_mbps is not none else '—')) }}
-    {{ analog('speed-up', '↑', [up / 10, 100]|min, (spd.up_mbps if spd.up_mbps is not none else '—')) }}
+    {{ analog('speed-down', '↓ Mbps', [down / 10, 100]|min, (spd.down_mbps if spd.down_mbps is not none else '—')) }}
+    {{ analog('speed-up', '↑ Mbps', [up / 10, 100]|min, (spd.up_mbps if spd.up_mbps is not none else '—')) }}
     <button type="submit" id="speed-run">{{ t.speed_test }}</button>
     <span id="speed-line" data-idle="{{ t.speed_idle }}" data-running="{{ t.speed_running }}" data-fail="{{ t.speed_fail }}" data-mbps="{{ t.mbps }}" data-ms="{{ t.ms }}" data-start="{{ t.speed_start }}" data-end="{{ t.speed_end }}">{% if spd.down_mbps %}{{ t.speed_start }} {{ spd.started or spd.at }} → {{ t.speed_end }} {{ spd.ended or spd.at }}{% else %}{{ t.speed_idle }}{% endif %}</span>
   </form>
