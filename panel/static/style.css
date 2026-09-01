@@ -164,3 +164,54 @@ body.sidebar-open .sidebar-backdrop[hidden]{display:block !important}
   .smart-inv{grid-template-columns:1fr}
   .smart-rank-card{grid-template-columns:1fr}
 }
+
+
+/* Keep topbar actions (restart/update) inside the header, even with a long FA title */
+.topbar{
+  height:auto;
+  min-height:89px;
+  padding-top:14px;
+  padding-bottom:14px;
+  flex-wrap:wrap;
+  align-items:center;
+  overflow:visible;
+}
+.topbar-title{
+  min-width:0;
+  flex:1 1 160px;
+}
+.topbar-title h1,
+.topbar-title p{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  max-width:100%;
+}
+.topbar-meta{
+  flex:0 1 auto;
+  flex-wrap:nowrap;
+  align-items:center;
+  gap:8px;
+  min-width:0;
+}
+.topbar-actions{
+  display:flex;
+  flex-wrap:nowrap;
+  flex-shrink:0;
+  align-items:center;
+  gap:6px;
+}
+.topbar-actions form{
+  margin:0;
+  display:inline-flex;
+}
+.topbar .ghost-button{
+  min-height:34px;
+  height:34px;
+  padding:0 12px;
+  line-height:1;
+  white-space:nowrap;
+}
+@media(max-width:1100px){
+  .topbar-meta > code.copyable{display:none}
+}
