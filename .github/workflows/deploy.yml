@@ -7,10 +7,12 @@ on:
       - "panel/**"
       - "clients/**"
       - "scripts/deploy.sh"
+      - "scripts/multivpn"
   workflow_dispatch: {}
 
 jobs:
   deploy:
+    if: ${{ secrets.DEPLOY_HOST != '' && secrets.DEPLOY_USER != '' && secrets.DEPLOY_SSH_KEY != '' }}
     runs-on: ubuntu-latest
     steps:
       - name: Deploy over SSH
