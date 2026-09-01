@@ -127,3 +127,6 @@ input,select,textarea{background:var(--input-bg)}
 }
 .sidebar-backdrop[hidden]{display:none !important}
 body.sidebar-open .sidebar-backdrop[hidden]{display:block !important}
+
+.authors-line{margin:10px 8px 0;font-size:10px;color:var(--muted);font-weight:600}
+.login-card .authors-line{text-align:center;margin-top:16px}
