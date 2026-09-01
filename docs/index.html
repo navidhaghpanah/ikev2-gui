@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NH MultiVPN</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;800&display=swap">
+<style>
+:root{--page:#0f0f11;--brand:#d4af37;--brand-hi:#ead07a;--ink:#f7f4ee;--muted:#9a8e7a;--line:rgba(212,175,55,.22);--ok:#2ecf9a}
+*{box-sizing:border-box}body{margin:0;font-family:Vazirmatn,Tahoma,sans-serif;background:var(--page);color:var(--ink);line-height:1.6}
+.wrap{max-width:980px;margin:0 auto;padding:48px 22px 80px}
+.mark{width:48px;height:48px;display:grid;place-items:center;border-radius:12px;background:linear-gradient(145deg,#ead07a,#d4af37 48%,#a88620);color:#1a1408;font-weight:800;letter-spacing:.04em;direction:ltr}
+h1{color:var(--brand);margin:14px 0 6px;font-size:28px}
+.muted{color:var(--muted);font-size:14px}
+.authors{margin:18px 0 28px;padding:14px 16px;border:1px solid var(--line);border-radius:12px;background:rgba(22,18,24,.55)}
+.authors b{color:var(--brand-hi)}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:22px 0}
+.card{border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:rgba(255,255,255,.04)}
+.card h3{margin:0 0 4px;font-size:15px;color:#fff8e7}
+.card p{margin:0;font-size:12px;color:var(--muted);direction:ltr;text-align:right}
+a{color:var(--brand);font-weight:700}
+img{width:100%;border-radius:12px;border:1px solid var(--line);margin:14px 0}
+@media(max-width:700px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="mark">NH</div>
+  <h1>NH MultiVPN</h1>
+  <p class="muted">پنل مدیریت IKEv2، L2TP، VLESS Reality، VMess، Shadowsocks 2022، Hysteria2، HTTP و MTProto روی Ubuntu.</p>
+  <div class="authors">نویسندگان: <b>Navid Haghpanah</b> · <b>Chief of Staff</b></div>
+  <p><a href="https://github.com/navidhaghpanah/multivpn-panel">GitHub</a> · <a href="WIKI.md">ویکی تصویری</a> · <a href="https://github.com/navidhaghpanah/multivpn-panel/releases">Releases</a></p>
+  <div class="grid">
+    <div class="card"><h3>IKEv2 EAP</h3><p>UDP 500 / 4500 · Let’s Encrypt</p></div>
+    <div class="card"><h3>L2TP / IPsec PSK</h3><p>UDP 1701 · همان user/pass + PSK</p></div>
+    <div class="card"><h3>VLESS Reality</h3><p>TCP 8443 · vision · بدون LE</p></div>
+    <div class="card"><h3>VMess WS+TLS</h3><p>TCP 2053 · path /vmess</p></div>
+    <div class="card"><h3>Shadowsocks 2022</h3><p>از 8388 · blake3-aes-128-gcm</p></div>
+    <div class="card"><h3>Hysteria2</h3><p>UDP 443 · salamander</p></div>
+    <div class="card"><h3>HTTP proxy</h3><p>TCP 10809 · user/pass پنل</p></div>
+    <div class="card"><h3>MTProto</h3><p>TCP 3128 · mtg FakeTLS</p></div>
+  </div>
+  <img src="visual/protocols.png" alt="protocols">
+  <img src="visual/ports.png" alt="ports">
+  <img src="visual/appearance.png" alt="appearance">
+</div>
+</body>
+</html>
