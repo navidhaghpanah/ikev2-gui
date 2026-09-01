@@ -216,20 +216,31 @@ body.sidebar-open .sidebar-backdrop[hidden]{display:block !important}
   .topbar-meta > code.copyable{display:none}
 }
 
-.machine-strip{display:flex;flex-wrap:nowrap;align-items:center;gap:6px 8px;padding:6px 10px;margin-bottom:12px;background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:auto}
-.machine-strip .ms-ip{font-size:12px;font-weight:800;direction:ltr;color:var(--heading);padding-inline-end:8px;border-inline-end:1px solid var(--line)}
-.machine-strip .ms-item{display:inline-flex;align-items:baseline;gap:3px;flex:none}
+.machine-strip{display:flex;flex-wrap:nowrap;align-items:center;gap:4px 6px;padding:4px 8px;margin-bottom:8px;width:100%;max-width:100%;box-sizing:border-box;background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.machine-strip .ms-ip{font-size:11px;font-weight:800;direction:ltr;color:var(--heading);padding-inline-end:6px;border-inline-end:1px solid var(--line);max-width:9.5rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:none}
+.machine-strip .ms-item{display:inline-flex;align-items:baseline;gap:2px;flex:none}
 .machine-strip small{color:var(--muted);font-size:8px;font-weight:700}
-.machine-strip b{font-size:11px;font-weight:800;direction:ltr;color:var(--heading);font-variant-numeric:tabular-nums}
-.ms-gauge{display:flex;flex-direction:column;align-items:center;gap:1px;flex:none;width:52px;margin:0}
-.ms-gauge svg{width:44px;height:44px;display:block}
+.machine-strip b{font-size:10px;font-weight:800;direction:ltr;color:var(--heading);font-variant-numeric:tabular-nums}
+.ms-net{display:inline-flex;align-items:baseline;gap:6px;flex:1 1 auto;min-width:0;overflow:hidden}
+.ms-gauge{display:flex;flex-direction:column;align-items:center;gap:0;flex:none;width:40px;margin:0}
+.ms-gauge svg{width:32px;height:32px;display:block}
 .ms-gauge .g-face{fill:rgba(0,0,0,.22);stroke:var(--line);stroke-width:2}
 .ms-gauge .g-tick{stroke:var(--muted);stroke-width:1.2;stroke-linecap:round}
 .ms-gauge .g-tick.major{stroke:var(--heading);stroke-width:1.6}
 .ms-gauge .g-hand{stroke:var(--brand);stroke-width:2.4;stroke-linecap:round}
 .ms-gauge .g-hub{fill:var(--brand);stroke:#1a1408;stroke-width:1}
-.ms-gauge figcaption{display:flex;flex-direction:column;align-items:center;line-height:1.15;margin:0}
-.ms-speed{display:inline-flex;align-items:center;gap:8px;flex:none;padding-inline-start:8px;border-inline-start:1px solid var(--line);margin:0}
-.ms-speed button{min-height:26px;padding:2px 8px;font-size:10px;width:auto;margin:0;background:linear-gradient(180deg,#e8c95a,var(--brand));color:var(--on-gold);border:0;border-radius:6px;font-weight:700;cursor:pointer;white-space:nowrap}
+.ms-gauge figcaption{display:flex;flex-direction:column;align-items:center;line-height:1.1;margin:0}
+.ms-speed{display:inline-flex;align-items:center;gap:6px;flex:none;min-width:0;padding-inline-start:6px;border-inline-start:1px solid var(--line);margin:0}
+.ms-speed button{min-height:24px;padding:2px 8px;font-size:10px;width:auto;margin:0;background:linear-gradient(180deg,#e8c95a,var(--brand));color:var(--on-gold);border:0;border-radius:6px;font-weight:700;cursor:pointer;white-space:nowrap}
 .ms-speed button:disabled{opacity:.7}
-#speed-line{font-size:10px;color:var(--heading);direction:ltr;white-space:nowrap}
+#speed-line{font-size:9px;color:var(--heading);direction:ltr;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:11rem}
+body.page-dash{overflow:hidden}
+body.page-dash .app-shell{height:100vh;max-height:100vh;overflow:hidden;display:flex;flex-direction:column}
+body.page-dash .content{flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;padding:10px 16px 12px;max-width:none}
+body.page-dash .dashboard-grid{flex:1;min-height:0;overflow:hidden;gap:10px;grid-template-rows:minmax(0,1fr) auto}
+body.page-dash .dashboard-grid > .panel{overflow:hidden;display:flex;flex-direction:column;padding:10px}
+body.page-dash .panel-header{margin-bottom:8px}
+body.page-dash .table-wrap{flex:1;min-height:0;overflow:hidden}
+body.page-dash .online-list{overflow:hidden}
+@media(max-width:1100px){#speed-line{display:none}.machine-strip .ms-ip{max-width:7rem}}
+@media(max-width:800px){.ms-net .ms-item:nth-child(n+3){display:none}}
