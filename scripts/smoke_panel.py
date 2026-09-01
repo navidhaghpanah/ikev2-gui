@@ -172,6 +172,13 @@ def scenario_happy(tmp: Path) -> None:
     _login(c)
     for path in ("/", "/users", "/sessions", "/clients", "/smart", "/settings", "/logs", "/api/status"):
         _expect(c, "GET", path, 200)
+    home = c.get("/").get_data(as_text=True)
+    if home.find("resource-panel") < 0 or home.find("speed-form") < 0:
+        raise AssertionError("dashboard missing resources or speed test")
+    if home.find("resource-panel") > home.find("span-2"):
+        raise AssertionError("resources not at top of dashboard")
+    if "203.0.113.10" not in home:
+        raise AssertionError("server IP missing on dashboard")
     for path in (
         "/clients/ss/alice",
         "/clients/hysteria/alice",
