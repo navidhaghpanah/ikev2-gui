@@ -162,6 +162,8 @@ I18N = {
         "speed_ping": "پینگ",
         "speed_fail": "تست سرعت انجام نشد.",
         "speed_idle": "هنوز تست نشده",
+        "speed_start": "شروع",
+        "speed_end": "پایان",
         "mbps": "مگابیت بر ثانیه",
         "ms": "ms",
         "quick": "دسترسی سریع",
@@ -532,6 +534,8 @@ I18N = {
         "speed_ping": "Ping",
         "speed_fail": "Speed test failed.",
         "speed_idle": "Not run yet",
+        "speed_start": "Start",
+        "speed_end": "End",
         "mbps": "Mbps",
         "ms": "ms",
         "quick": "Quick actions",
@@ -3939,14 +3943,18 @@ def _speed_upload():
 
 
 def run_speed_test():
+    started_dt = now_tehran()
     ping = _tcp_ping_ms("speed.cloudflare.com")
     if ping is None:
         ping = _tcp_ping_ms("1.0.0.1")
     down = _speed_download()
     up = _speed_upload() if down.get("ok") else {"ok": False}
+    ended_dt = now_tehran()
     result = {
         "ok": bool(down.get("ok")),
-        "at": now_tehran().strftime("%Y/%m/%d %H:%M"),
+        "at": ended_dt.strftime("%Y/%m/%d %H:%M:%S"),
+        "started": started_dt.strftime("%H:%M:%S"),
+        "ended": ended_dt.strftime("%H:%M:%S"),
         "ping_ms": ping,
         "down_mbps": down.get("mbps") if down.get("ok") else None,
         "up_mbps": up.get("mbps") if up.get("ok") else None,
@@ -4420,9 +4428,9 @@ def update_status():
     if not (REPO_DIR / ".git").is_dir():
         return None
     run(["git", "-C", str(REPO_DIR), "fetch", "origin", REPO_BRANCH], timeout=20)
-    cur = run(["git", "-C", str(REPO_DIR), "log", "-1", "--format=%h %ci", "HEAD"], timeout=10).strip()
+    cur = run(["git", "-C", str(REPO_DIR), "log", "-1", "--format=%h %ad", "--date=short", "HEAD"], timeout=10).strip()
     latest = run(
-        ["git", "-C", str(REPO_DIR), "log", "-1", "--format=%h %ci", "origin/%s" % REPO_BRANCH], timeout=10
+        ["git", "-C", str(REPO_DIR), "log", "-1", "--format=%h %ad", "--date=short", "origin/%s" % REPO_BRANCH], timeout=10
     ).strip()
     behind_raw = run(
         ["git", "-C", str(REPO_DIR), "rev-list", "--count", "HEAD..origin/%s" % REPO_BRANCH], timeout=10
