@@ -57,9 +57,21 @@ XRAY_SS_BIN = Path("/opt/panel-xray/xray")
 XRAY_SS_CONFIG = Path("/etc/panel-xray/config.json")
 HYSTERIA_BIN = Path("/opt/panel-hysteria/hysteria")
 HYSTERIA_CONFIG = Path("/etc/panel-hysteria/config.yaml")
+MTG_BIN = Path("/opt/panel-mtg/mtg")
+MTG_CONFIG = Path("/etc/panel-mtg/mtg.toml")
+NGINX_SITE = Path("/etc/nginx/sites-available/ikev2-l2tp-gui")
+LE_LIVE = Path("/etc/letsencrypt/live")
+IPSEC_CERT = Path("/etc/ipsec.d/certs/server.crt")
+IPSEC_KEY = Path("/etc/ipsec.d/private/server.key")
+CERTBOT_HOOK = Path("/etc/letsencrypt/renewal-hooks/deploy/ikev2-l2tp-gui.sh")
 SS_METHOD = "2022-blake3-aes-128-gcm"
+VMESS_PATH = "/vmess"
 TZ = ZoneInfo("Asia/Tehran")
 USER_RE = re.compile(r"^[A-Za-z0-9._-]{2,32}$")
+# Same rule as install.sh valid_domain.
+DOMAIN_RE = re.compile(
+    r"^([A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,63}$"
+)
 FA_D = str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹")
 
 app = Flask(
@@ -162,6 +174,25 @@ def load_config():
         changed = True
     if not cfg.get("hy_obfs_password"):
         cfg["hy_obfs_password"] = secrets.token_urlsafe(16)
+        changed = True
+    if "vmess_port" not in cfg:
+        cfg["vmess_port"] = 2053
+        changed = True
+    if "http_port" not in cfg:
+        cfg["http_port"] = 10809
+        changed = True
+    if "mtg_port" not in cfg:
+        cfg["mtg_port"] = 3128
+        changed = True
+    if not cfg.get("mtg_domain"):
+        cfg["mtg_domain"] = "cloudflare.com"
+        changed = True
+    if not cfg.get("reality_dest"):
+        cfg["reality_dest"] = "www.microsoft.com:443"
+        changed = True
+    names = cfg.get("reality_server_names")
+    if not isinstance(names, list) or not names:
+        cfg["reality_server_names"] = ["www.microsoft.com"]
         changed = True
     if changed:
         save_json(CONFIG_FILE, cfg)
@@ -359,6 +390,137 @@ def new_sub_token():
     return secrets.token_urlsafe(24)
 
 
+def new_vmess_uuid():
+    return str(uuid.uuid4())
+
+
+def b64url_nopad(raw):
+    return base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
+
+
+def parse_x25519_output(text):
+    # xray x25519 labels evolved: "Public key" -> "Password" -> "Password (PublicKey)".
+    # Hash32 is a different field and must never be used as the Reality pbk.
+    priv = pub = ""
+    for raw in (text or "").splitlines():
+        if ":" not in raw:
+            continue
+        label, value = raw.split(":", 1)
+        label_n = re.sub(r"[^a-z0-9]", "", label.strip().lower())
+        value = value.strip()
+        if not value:
+            continue
+        if label_n in ("privatekey", "private"):
+            priv = value
+        elif label_n in ("publickey", "passwordpublickey", "password"):
+            pub = value
+    return priv, pub
+
+
+def generate_reality_keys():
+    """Mint x25519 Reality keys at runtime. Never commit placeholders.
+
+    Prefer `/opt/panel-xray/xray x25519`. Fallback: `openssl genpkey -algorithm x25519`
+    then take the last 32 bytes of PKCS8/SPKI DER (raw Curve25519 seed/point) and
+    encode url-safe base64 without padding — the same wire format xray uses.
+    """
+    if XRAY_SS_BIN.is_file():
+        try:
+            p = subprocess.run(
+                [str(XRAY_SS_BIN), "x25519"],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            priv, pub = parse_x25519_output((p.stdout or "") + "\n" + (p.stderr or ""))
+            if priv and pub:
+                return priv, pub
+        except (OSError, subprocess.SubprocessError):
+            pass
+    try:
+        gen = subprocess.run(
+            ["openssl", "genpkey", "-algorithm", "x25519"],
+            capture_output=True,
+            timeout=10,
+        )
+        if gen.returncode != 0 or not gen.stdout:
+            return "", ""
+        der_priv = subprocess.run(
+            ["openssl", "pkey", "-outform", "DER"],
+            input=gen.stdout,
+            capture_output=True,
+            timeout=10,
+        ).stdout
+        der_pub = subprocess.run(
+            ["openssl", "pkey", "-pubout", "-outform", "DER"],
+            input=gen.stdout,
+            capture_output=True,
+            timeout=10,
+        ).stdout
+        if len(der_priv) < 32 or len(der_pub) < 32:
+            return "", ""
+        return b64url_nopad(der_priv[-32:]), b64url_nopad(der_pub[-32:])
+    except (OSError, subprocess.SubprocessError):
+        return "", ""
+
+
+def ensure_reality_keys(cfg):
+    """Generate Reality material once and store it in config.json."""
+    changed = False
+    if not cfg.get("reality_dest"):
+        cfg["reality_dest"] = "www.microsoft.com:443"
+        changed = True
+    names = cfg.get("reality_server_names")
+    if not isinstance(names, list) or not names:
+        cfg["reality_server_names"] = ["www.microsoft.com"]
+        changed = True
+    if not cfg.get("reality_short_id"):
+        cfg["reality_short_id"] = secrets.token_hex(4)
+        changed = True
+    priv = (cfg.get("reality_private") or "").strip()
+    pub = (cfg.get("reality_public") or "").strip()
+    if not priv or not pub:
+        priv, pub = generate_reality_keys()
+        if priv and pub:
+            cfg["reality_private"] = priv
+            cfg["reality_public"] = pub
+            changed = True
+    if changed:
+        save_config(cfg)
+    return cfg
+
+
+def le_cert_paths(domain):
+    live = LE_LIVE / (domain or "")
+    return live / "fullchain.pem", live / "privkey.pem"
+
+
+def new_mtg_secret(front_domain):
+    """FakeTLS secret: 0xee + 16 random bytes + ASCII hostname, hex-encoded.
+
+    Same layout as 9seconds/mtg `generate-secret --hex`. Prefer the binary
+    when installed; Python fallback lets the panel mint a secret before mtg
+    is downloaded.
+    """
+    host = (front_domain or "cloudflare.com").strip() or "cloudflare.com"
+    host = re.sub(r"[^A-Za-z0-9.-]", "", host) or "cloudflare.com"
+    if MTG_BIN.is_file():
+        try:
+            p = subprocess.run(
+                [str(MTG_BIN), "generate-secret", "--hex", host],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            secret = (p.stdout or "").strip().split()[0] if p.stdout else ""
+            if re.fullmatch(r"ee[0-9a-fA-F]{32,}", secret):
+                return secret.lower()
+        except (OSError, subprocess.SubprocessError, IndexError):
+            pass
+    key = secrets.token_bytes(16)
+    return "ee" + key.hex() + host.encode("ascii").hex()
+
+
 def write_xray_ss_config(users=None):
     # One dedicated inbound per user (own port + own key) rather than a
     # single shared-port multi-user (EIH) inbound: xray-core's shadowsocks
@@ -369,7 +531,7 @@ def write_xray_ss_config(users=None):
     # "serverKey:userKey"). Per-user ports sidestep that entirely and work
     # with any standard Shadowsocks-2022 client.
     users = load_users() if users is None else users
-    cfg = load_config()
+    cfg = ensure_reality_keys(load_config())
     inbounds = []
     for name, u in users.items():
         if user_blocked(u) or not u.get("ss_enabled"):
@@ -392,9 +554,8 @@ def write_xray_ss_config(users=None):
                 },
             }
         )
-    # VLESS is a single shared port for every user (no EIH-style handshake
-    # issue like Shadowsocks-2022 — each client just carries its own UUID),
-    # so it's one inbound with a multi-entry "clients" list.
+    # VLESS Reality (xtls-rprx-vision + TCP). No Let's Encrypt required.
+    # Port stays at vless_port (default 8443) because nginx already owns 443/tcp.
     vless_clients = []
     for name, u in users.items():
         if user_blocked(u) or not u.get("vless_enabled"):
@@ -402,12 +563,21 @@ def write_xray_ss_config(users=None):
         uid = u.get("vless_uuid") or ""
         if not re.fullmatch(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", uid):
             continue
-        vless_clients.append({"id": uid, "level": 0, "email": name})
+        vless_clients.append(
+            {
+                "id": uid,
+                "level": 0,
+                "email": name,
+                "flow": "xtls-rprx-vision",
+            }
+        )
     if vless_clients:
-        domain = (cfg.get("domain") or "").strip()
-        cert = Path("/etc/letsencrypt/live") / domain / "fullchain.pem"
-        key_path = Path("/etc/letsencrypt/live") / domain / "privkey.pem"
-        if cert.is_file() and key_path.is_file():
+        cfg = ensure_reality_keys(cfg)
+        priv = (cfg.get("reality_private") or "").strip()
+        dest = (cfg.get("reality_dest") or "www.microsoft.com:443").strip()
+        names = cfg.get("reality_server_names") or ["www.microsoft.com"]
+        short_id = (cfg.get("reality_short_id") or "").strip()
+        if priv:
             inbounds.append(
                 {
                     "tag": "vless-in",
@@ -417,15 +587,76 @@ def write_xray_ss_config(users=None):
                     "settings": {"clients": vless_clients, "decryption": "none"},
                     "streamSettings": {
                         "network": "tcp",
-                        "security": "tls",
-                        "tlsSettings": {
-                            "certificates": [
-                                {"certificateFile": str(cert), "keyFile": str(key_path)}
-                            ]
+                        "security": "reality",
+                        "realitySettings": {
+                            "show": False,
+                            "dest": dest,
+                            "serverNames": list(names),
+                            "privateKey": priv,
+                            "shortIds": [short_id] if short_id else [""],
                         },
+                    },
+                    "sniffing": {
+                        "enabled": True,
+                        "destOverride": ["http", "tls", "quic"],
+                        "routeOnly": True,
                     },
                 }
             )
+    # VMess: shared port, TCP + WebSocket + TLS on the Let's Encrypt cert of config.domain.
+    # Only added when the cert files exist (same constraint the old VLESS-TLS inbound had).
+    vmess_clients = []
+    for name, u in users.items():
+        if user_blocked(u) or not u.get("vmess_enabled"):
+            continue
+        uid = u.get("vmess_uuid") or ""
+        if not re.fullmatch(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", uid):
+            continue
+        vmess_clients.append({"id": uid, "alterId": 0, "email": name, "security": "auto"})
+    domain = (cfg.get("domain") or "").strip()
+    cert, key_path = le_cert_paths(domain)
+    if vmess_clients and cert.is_file() and key_path.is_file():
+        ws_settings = {"path": VMESS_PATH}
+        if domain:
+            ws_settings["headers"] = {"Host": domain}
+        inbounds.append(
+            {
+                "tag": "vmess-in",
+                "listen": "0.0.0.0",
+                "port": int(cfg.get("vmess_port") or 2053),
+                "protocol": "vmess",
+                "settings": {"clients": vmess_clients},
+                "streamSettings": {
+                    "network": "ws",
+                    "security": "tls",
+                    "tlsSettings": {
+                        "certificates": [
+                            {"certificateFile": str(cert), "keyFile": str(key_path)}
+                        ]
+                    },
+                    "wsSettings": ws_settings,
+                },
+            }
+        )
+    # HTTP proxy inbound (no TLS). Accounts = panel users with http_enabled.
+    http_accounts = []
+    for name, u in users.items():
+        if user_blocked(u) or not u.get("http_enabled"):
+            continue
+        pw = u.get("password") or ""
+        if not safe_secret(pw, 4, 128):
+            continue
+        http_accounts.append({"user": name, "pass": pw})
+    if http_accounts:
+        inbounds.append(
+            {
+                "tag": "http-in",
+                "listen": "0.0.0.0",
+                "port": int(cfg.get("http_port") or 10809),
+                "protocol": "http",
+                "settings": {"accounts": http_accounts, "allowTransparent": False},
+            }
+        )
     doc = {
         "log": {"loglevel": "warning"},
         "stats": {},
@@ -456,6 +687,7 @@ def write_xray_ss_config(users=None):
         run(["systemctl", "restart", "panel-shadowsocks"], timeout=15)
     else:
         run(["systemctl", "stop", "panel-shadowsocks"], timeout=15)
+
 
 
 def yaml_str(value):
@@ -521,6 +753,182 @@ def write_hysteria_config(users=None):
         run(["systemctl", "restart", "panel-hysteria"], timeout=15)
     else:
         run(["systemctl", "stop", "panel-hysteria"], timeout=15)
+
+
+def write_mtg_config(users=None):
+    # Xray has no mtproto inbound. Like 3x-ui v3.3 we run sidecar mtg
+    # (9seconds/mtg) with a single FakeTLS secret at panel/settings level.
+    # Per-user mtg_enabled only controls whether that user sees the same
+    # tg:// link — minting a unique secret per account is too heavy for mtg.
+    users = load_users() if users is None else users
+    cfg = load_config()
+    any_user = any(
+        (not user_blocked(u)) and u.get("mtg_enabled") for u in users.values()
+    )
+    if not any_user:
+        run(["systemctl", "stop", "panel-mtg"], timeout=15)
+        return
+    changed = False
+    if not cfg.get("mtg_domain"):
+        cfg["mtg_domain"] = "cloudflare.com"
+        changed = True
+    try:
+        port = int(cfg.get("mtg_port") or 3128)
+    except (TypeError, ValueError):
+        port = 3128
+        cfg["mtg_port"] = port
+        changed = True
+    secret = (cfg.get("mtg_secret") or "").strip()
+    if not re.fullmatch(r"ee[0-9a-fA-F]{32,}", secret):
+        secret = new_mtg_secret(cfg.get("mtg_domain") or "cloudflare.com")
+        cfg["mtg_secret"] = secret
+        changed = True
+    if changed:
+        save_config(cfg)
+    # Secret is hex-only so it is safe inside TOML double quotes.
+    new_text = 'secret = "%s"\nbind-to = "0.0.0.0:%d"\n' % (secret, port)
+    try:
+        unchanged = MTG_CONFIG.read_text(encoding="utf-8") == new_text
+    except OSError:
+        unchanged = False
+    if not unchanged:
+        MTG_CONFIG.parent.mkdir(parents=True, exist_ok=True)
+        tmp = MTG_CONFIG.with_suffix(".tmp")
+        tmp.write_text(new_text, encoding="utf-8")
+        os.chmod(tmp, 0o600)
+        tmp.replace(MTG_CONFIG)
+    run(["systemctl", "restart", "panel-mtg"], timeout=15)
+
+
+def rewrite_ipsec_leftid(domain):
+    """Set leftid=@DOMAIN on the IKEv2-EAP conn only; leave L2TP-PSK alone."""
+    if not IPSEC_CONF.exists():
+        return
+    text = IPSEC_CONF.read_text(encoding="utf-8", errors="replace")
+    parts = re.split(r"(?=^conn )", text, flags=re.M)
+    out = []
+    for part in parts:
+        if re.match(r"^conn\s+IKEv2-EAP\b", part):
+            part = re.sub(r"(?m)^([ \t]*leftid=)\S+", r"\1@" + domain, part)
+        out.append(part)
+    new_text = "".join(out)
+    if new_text != text:
+        IPSEC_CONF.write_text(new_text, encoding="utf-8")
+
+
+def _copy_le_to_ipsec(domain):
+    cert, key = le_cert_paths(domain)
+    if not cert.is_file() or not key.is_file():
+        return False
+    IPSEC_CERT.parent.mkdir(parents=True, exist_ok=True)
+    IPSEC_KEY.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(cert, IPSEC_CERT)
+    shutil.copy2(key, IPSEC_KEY)
+    os.chmod(IPSEC_KEY, 0o600)
+    return True
+
+
+def _write_certbot_hook(domain):
+    CERTBOT_HOOK.parent.mkdir(parents=True, exist_ok=True)
+    CERTBOT_HOOK.write_text(
+        "#!/bin/bash\n"
+        "cp -f /etc/letsencrypt/live/%s/fullchain.pem /etc/ipsec.d/certs/server.crt\n"
+        "cp -f /etc/letsencrypt/live/%s/privkey.pem /etc/ipsec.d/private/server.key\n"
+        "chmod 600 /etc/ipsec.d/private/server.key\n"
+        "ipsec rereadall >/dev/null 2>&1 || true\n"
+        "systemctl reload nginx >/dev/null 2>&1 || true\n" % (domain, domain),
+        encoding="utf-8",
+    )
+    os.chmod(CERTBOT_HOOK, 0o755)
+
+
+def _nginx_set_server_name(text, domain):
+    return re.sub(r"(?m)^( *server_name\s+)\S+;", r"\1%s;" % domain, text)
+
+
+def _nginx_set_cert_paths(text, domain):
+    text = re.sub(
+        r"(ssl_certificate\s+)/etc/letsencrypt/live/[^/]+/fullchain\.pem;",
+        r"\1/etc/letsencrypt/live/%s/fullchain.pem;" % domain,
+        text,
+    )
+    text = re.sub(
+        r"(ssl_certificate_key\s+)/etc/letsencrypt/live/[^/]+/privkey\.pem;",
+        r"\1/etc/letsencrypt/live/%s/privkey.pem;" % domain,
+        text,
+    )
+    return text
+
+
+def apply_domain_ssl(old_domain, domain):
+    """Try Let's Encrypt webroot + nginx/ipsec certs. Never restart xl2tpd.
+
+    Returns (ok, note). Domain is already saved in config.json by the caller.
+    If certbot fails we keep existing nginx certs so HTTPS of the old name
+    still works, and flash that SSL must be issued for the new domain.
+    """
+    if not NGINX_SITE.exists() or not shutil.which("certbot"):
+        run(["ipsec", "rereadall"])
+        run(["ipsec", "reload"])
+        return False, "certbot یا سایت nginx پیدا نشد."
+    try:
+        site = NGINX_SITE.read_text(encoding="utf-8", errors="replace")
+    except OSError as e:
+        return False, str(e)
+    updated = _nginx_set_server_name(site, domain)
+    if updated != site:
+        NGINX_SITE.write_text(updated, encoding="utf-8")
+        site = updated
+    test = run(["nginx", "-t"], timeout=15)
+    if "syntax is ok" not in test.lower() and "test is successful" not in test.lower() and "successful" not in test.lower():
+        # nginx -t prints to stderr which run() concatenates.
+        if "failed" in test.lower() or "error" in test.lower():
+            return False, test[-300:]
+    run(["systemctl", "reload", "nginx"], timeout=15)
+    cmd = [
+        "certbot",
+        "certonly",
+        "--webroot",
+        "-w",
+        "/var/www/html",
+        "--non-interactive",
+        "--agree-tos",
+        "--cert-name",
+        domain,
+        "--key-type",
+        "rsa",
+        "--rsa-key-size",
+        "2048",
+        "-d",
+        domain,
+        "--register-unsafely-without-email",
+    ]
+    cert, key = le_cert_paths(domain)
+    if cert.is_file():
+        cmd.append("--keep-until-expiring")
+    try:
+        p = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+        certbot_out = ((p.stdout or "") + "\n" + (p.stderr or "")).strip()
+        ok = p.returncode == 0 and cert.is_file() and key.is_file()
+    except (OSError, subprocess.SubprocessError) as e:
+        certbot_out = str(e)
+        ok = False
+    if not ok:
+        run(["ipsec", "rereadall"])
+        run(["ipsec", "reload"])
+        return False, certbot_out[-300:]
+    site = _nginx_set_cert_paths(site, domain)
+    NGINX_SITE.write_text(site, encoding="utf-8")
+    test = run(["nginx", "-t"], timeout=15)
+    if "failed" in test.lower() and "successful" not in test.lower():
+        return False, test[-300:]
+    run(["systemctl", "reload", "nginx"], timeout=15)
+    _copy_le_to_ipsec(domain)
+    _write_certbot_hook(domain)
+    run(["ipsec", "rereadall"])
+    run(["ipsec", "reload"])
+    run(["systemctl", "reload", "strongswan-starter"], timeout=15)
+    return True, ""
 
 
 def xray_ss_stats():
@@ -818,6 +1226,7 @@ def sample_traffic():
             # done on every traffic-accounting tick.
             write_xray_ss_config(users)
             write_hysteria_config(users)
+            write_mtg_config(users)
         return users, sessions
 
 
@@ -954,6 +1363,9 @@ def dashboard_payload():
                 "ss_enabled": bool(u.get("ss_enabled")),
                 "hy_enabled": bool(u.get("hy_enabled")),
                 "vless_enabled": bool(u.get("vless_enabled")),
+                "vmess_enabled": bool(u.get("vmess_enabled")),
+                "http_enabled": bool(u.get("http_enabled")),
+                "mtg_enabled": bool(u.get("mtg_enabled")),
             }
         )
     cfg = load_config()
@@ -1092,6 +1504,7 @@ def settings():
     d["telegram_bot_masked"] = ("…" + token[-6:]) if token else ""
     d["telegram_admin_ids"] = ", ".join(str(i) for i in (cfg.get("telegram_admin_ids") or []))
     d["update_info"] = update_status()
+    d["domain"] = (cfg.get("domain") or "").strip()
     return render_template("settings.html", **d)
 
 
@@ -1195,15 +1608,72 @@ def hy_uri(name, u, cfg):
 def vless_uri(name, u, cfg):
     uid = u.get("vless_uuid") or ""
     port = int(cfg.get("vless_port") or 8443)
-    domain = (cfg.get("domain") or "").strip()
-    host = domain or (cfg.get("public_ip") or "").strip()
-    q = {"type": "tcp", "security": "tls", "encryption": "none", "sni": domain}
+    host = (cfg.get("domain") or cfg.get("public_ip") or "").strip()
+    names = cfg.get("reality_server_names") or ["www.microsoft.com"]
+    dest = (cfg.get("reality_dest") or "www.microsoft.com:443").strip()
+    sni = names[0] if names else dest.split(":")[0]
+    q = {
+        "type": "tcp",
+        "encryption": "none",
+        "security": "reality",
+        "flow": "xtls-rprx-vision",
+        "sni": sni,
+        "fp": "chrome",
+        "pbk": (cfg.get("reality_public") or "").strip(),
+        "sid": (cfg.get("reality_short_id") or "").strip(),
+    }
     return "vless://%s@%s:%d?%s#%s" % (
         uid,
         host,
         port,
         urllib.parse.urlencode(q),
         urllib.parse.quote(name),
+    )
+
+
+def vmess_uri(name, u, cfg):
+    uid = u.get("vmess_uuid") or ""
+    port = int(cfg.get("vmess_port") or 2053)
+    domain = (cfg.get("domain") or "").strip()
+    host = domain or (cfg.get("public_ip") or "").strip()
+    obj = {
+        "add": host,
+        "ps": name,
+        "port": str(port),
+        "id": uid,
+        "aid": 0,
+        "net": "ws",
+        "tls": "tls",
+        "host": domain or host,
+        "path": VMESS_PATH,
+        "sni": domain or host,
+        "v": "2",
+        "type": "none",
+    }
+    raw = json.dumps(obj, separators=(",", ":"), ensure_ascii=False)
+    return "vmess://" + base64.b64encode(raw.encode("utf-8")).decode("ascii")
+
+
+def http_proxy_uri(name, u, cfg):
+    port = int(cfg.get("http_port") or 10809)
+    host = (cfg.get("domain") or cfg.get("public_ip") or "").strip()
+    pw = u.get("password") or ""
+    return "http://%s:%s@%s:%d" % (
+        urllib.parse.quote(name, safe=""),
+        urllib.parse.quote(pw, safe=""),
+        host,
+        port,
+    )
+
+
+def mtg_uri(cfg):
+    host = (cfg.get("domain") or cfg.get("public_ip") or "").strip()
+    port = int(cfg.get("mtg_port") or 3128)
+    secret = (cfg.get("mtg_secret") or "").strip()
+    return "tg://proxy?server=%s&port=%d&secret=%s" % (
+        urllib.parse.quote(host, safe=""),
+        port,
+        urllib.parse.quote(secret, safe=""),
     )
 
 
@@ -1215,6 +1685,12 @@ def sub_uris(name, u, cfg):
         uris.append(hy_uri(name, u, cfg))
     if u.get("vless_enabled") and u.get("vless_uuid"):
         uris.append(vless_uri(name, u, cfg))
+    if u.get("vmess_enabled") and u.get("vmess_uuid"):
+        uris.append(vmess_uri(name, u, cfg))
+    if u.get("http_enabled") and u.get("password"):
+        uris.append(http_proxy_uri(name, u, cfg))
+    if u.get("mtg_enabled") and (cfg.get("mtg_secret") or ""):
+        uris.append(mtg_uri(cfg))
     return uris
 
 
@@ -1328,7 +1804,7 @@ def clients_vless(name):
     d.update(
         page="clients",
         page_title="VLESS — %s" % name,
-        page_subtitle="کانفیگ اتصال VLESS این کاربر",
+        page_subtitle="کانفیگ اتصال VLESS Reality (Vision) این کاربر",
         proto_name="VLESS",
         uri=uri,
         qr_url=url_for("clients_vless_qr", name=name),
@@ -1348,6 +1824,124 @@ def clients_vless_qr(name):
     if not u or not u.get("vless_enabled"):
         return ("", 404)
     png = qr_png(vless_uri(name, u, load_config()))
+    return (png, 200, {"Content-Type": "image/png", "Cache-Control": "no-store"})
+
+
+@app.route("/clients/vmess/<name>")
+@login_required
+def clients_vmess(name):
+    users = load_users()
+    u = users.get(name)
+    if not u or not u.get("vmess_enabled"):
+        flash("VMess برای این کاربر فعال نیست.")
+        return redirect(url_for("clients_page"))
+    cfg = load_config()
+    uri = vmess_uri(name, u, cfg)
+    d = dashboard_payload()
+    d["admin_user"] = load_admin().get("user") or ""
+    d.update(
+        page="clients",
+        page_title="VMess — %s" % name,
+        page_subtitle="کانفیگ اتصال VMess (WebSocket + TLS) این کاربر",
+        proto_name="VMess",
+        uri=uri,
+        qr_url=url_for("clients_vmess_qr", name=name),
+        method="ws+tls",
+        server_key="",
+        user_key=u.get("vmess_uuid") or "",
+        port=cfg.get("vmess_port") or 2053,
+    )
+    return render_template("client_proto.html", **d)
+
+
+@app.route("/clients/vmess/<name>/qr.png")
+@login_required
+def clients_vmess_qr(name):
+    users = load_users()
+    u = users.get(name)
+    if not u or not u.get("vmess_enabled"):
+        return ("", 404)
+    png = qr_png(vmess_uri(name, u, load_config()))
+    return (png, 200, {"Content-Type": "image/png", "Cache-Control": "no-store"})
+
+
+@app.route("/clients/http/<name>")
+@login_required
+def clients_http(name):
+    users = load_users()
+    u = users.get(name)
+    if not u or not u.get("http_enabled"):
+        flash("پروکسی HTTP برای این کاربر فعال نیست.")
+        return redirect(url_for("clients_page"))
+    cfg = load_config()
+    uri = http_proxy_uri(name, u, cfg)
+    d = dashboard_payload()
+    d["admin_user"] = load_admin().get("user") or ""
+    d.update(
+        page="clients",
+        page_title="HTTP — %s" % name,
+        page_subtitle="پروکسی HTTP این کاربر (host:port + نام کاربری / رمز)",
+        proto_name="HTTP",
+        uri=uri,
+        qr_url=url_for("clients_http_qr", name=name),
+        method="http",
+        server_key=u.get("password") or "",
+        user_key=name,
+        port=cfg.get("http_port") or 10809,
+    )
+    return render_template("client_proto.html", **d)
+
+
+@app.route("/clients/http/<name>/qr.png")
+@login_required
+def clients_http_qr(name):
+    users = load_users()
+    u = users.get(name)
+    if not u or not u.get("http_enabled"):
+        return ("", 404)
+    png = qr_png(http_proxy_uri(name, u, load_config()))
+    return (png, 200, {"Content-Type": "image/png", "Cache-Control": "no-store"})
+
+
+@app.route("/clients/mtg/<name>")
+@login_required
+def clients_mtg(name):
+    users = load_users()
+    u = users.get(name)
+    if not u or not u.get("mtg_enabled"):
+        flash("MTProto برای این کاربر فعال نیست.")
+        return redirect(url_for("clients_page"))
+    cfg = load_config()
+    if not (cfg.get("mtg_secret") or "").strip():
+        with _lock:
+            write_mtg_config(users)
+            cfg = load_config()
+    uri = mtg_uri(cfg)
+    d = dashboard_payload()
+    d["admin_user"] = load_admin().get("user") or ""
+    d.update(
+        page="clients",
+        page_title="MTProto — %s" % name,
+        page_subtitle="لینک پروکسی تلگرام (یک secret مشترک برای همهٔ کاربران فعال)",
+        proto_name="MTProto",
+        uri=uri,
+        qr_url=url_for("clients_mtg_qr", name=name),
+        method="FakeTLS",
+        server_key=cfg.get("mtg_secret") or "",
+        user_key="",
+        port=cfg.get("mtg_port") or 3128,
+    )
+    return render_template("client_proto.html", **d)
+
+
+@app.route("/clients/mtg/<name>/qr.png")
+@login_required
+def clients_mtg_qr(name):
+    users = load_users()
+    u = users.get(name)
+    if not u or not u.get("mtg_enabled"):
+        return ("", 404)
+    png = qr_png(mtg_uri(load_config()))
     return (png, 200, {"Content-Type": "image/png", "Cache-Control": "no-store"})
 
 
@@ -1480,6 +2074,9 @@ def users_add():
     ss_enabled = request.form.get("ss_enabled") == "1"
     hy_enabled = request.form.get("hy_enabled") == "1"
     vless_enabled = request.form.get("vless_enabled") == "1"
+    vmess_enabled = request.form.get("vmess_enabled") == "1"
+    http_enabled = request.form.get("http_enabled") == "1"
+    mtg_enabled = request.form.get("mtg_enabled") == "1" or request.form.get("mtp") == "1"
     if not USER_RE.match(name):
         flash("نام کاربری فقط حروف انگلیسی و عدد، ۲ تا ۳۲ نویسه.")
         return redirect(url_for("users_page"))
@@ -1514,15 +2111,20 @@ def users_add():
             "ss_enabled": ss_enabled,
             "hy_enabled": hy_enabled,
             "vless_enabled": vless_enabled,
+            "vmess_enabled": vmess_enabled,
+            "http_enabled": http_enabled,
+            "mtg_enabled": mtg_enabled,
             "ss_key": new_ss_key() if ss_enabled else "",
             "ss_port": allocate_ss_port() if ss_enabled else None,
             "vless_uuid": new_vless_uuid() if vless_enabled else "",
+            "vmess_uuid": new_vmess_uuid() if vmess_enabled else "",
             "sub_token": new_sub_token(),
         }
         save_users(users)
         write_secrets(users)
         write_xray_ss_config(users)
         write_hysteria_config(users)
+        write_mtg_config(users)
     proto_note = []
     if ss_enabled:
         proto_note.append("Shadowsocks")
@@ -1530,6 +2132,12 @@ def users_add():
         proto_note.append("VLESS")
     if hy_enabled:
         proto_note.append("Hysteria2")
+    if vmess_enabled:
+        proto_note.append("VMess")
+    if http_enabled:
+        proto_note.append("HTTP")
+    if mtg_enabled:
+        proto_note.append("MTProto")
     label = " + ".join(["IKEv2"] + proto_note)
     flash("کاربر %s اضافه شد (%s)." % (name, label))
     return redirect(url_for("users_page"))
@@ -1547,6 +2155,9 @@ def users_update():
     ss_enabled = request.form.get("ss_enabled") == "1"
     hy_enabled = request.form.get("hy_enabled") == "1"
     vless_enabled = request.form.get("vless_enabled") == "1"
+    vmess_enabled = request.form.get("vmess_enabled") == "1"
+    http_enabled = request.form.get("http_enabled") == "1"
+    mtg_enabled = request.form.get("mtg_enabled") == "1" or request.form.get("mtp") == "1"
     if not USER_RE.match(name):
         flash("نام کاربری نامعتبر است.")
         return redirect(url_for("users_page"))
@@ -1581,16 +2192,22 @@ def users_update():
         users[name]["ss_enabled"] = ss_enabled
         users[name]["hy_enabled"] = hy_enabled
         users[name]["vless_enabled"] = vless_enabled
+        users[name]["vmess_enabled"] = vmess_enabled
+        users[name]["http_enabled"] = http_enabled
+        users[name]["mtg_enabled"] = mtg_enabled
         if ss_enabled and not users[name].get("ss_key"):
             users[name]["ss_key"] = new_ss_key()
         if ss_enabled and not users[name].get("ss_port"):
             users[name]["ss_port"] = allocate_ss_port()
         if vless_enabled and not users[name].get("vless_uuid"):
             users[name]["vless_uuid"] = new_vless_uuid()
+        if vmess_enabled and not users[name].get("vmess_uuid"):
+            users[name]["vmess_uuid"] = new_vmess_uuid()
         save_users(users)
         write_secrets(users)
         write_xray_ss_config(users)
         write_hysteria_config(users)
+        write_mtg_config(users)
     flash("تنظیمات کاربر %s ذخیره شد." % name)
     return redirect(url_for("users_page"))
 
@@ -1613,6 +2230,7 @@ def users_delete():
         write_secrets(users)
         write_xray_ss_config(users)
         write_hysteria_config(users)
+        write_mtg_config(users)
     flash("کاربر %s حذف شد." % name)
     return redirect(url_for("users_page"))
 
@@ -1651,6 +2269,36 @@ def sessions_delete():
     terminate_ike_session(selected)
     flash("نشست %s برای بسته‌شدن علامت‌گذاری شد." % fa(session_id))
     return redirect(url_for("sessions_page"))
+
+
+@app.route("/settings/domain", methods=["POST"])
+@login_required
+@csrf_required
+def settings_domain():
+    domain = (request.form.get("domain") or "").strip().lower()
+    if not DOMAIN_RE.match(domain):
+        flash("دامنه نامعتبر است.")
+        return redirect(url_for("settings"))
+    with _lock:
+        cfg = load_config()
+        old_domain = (cfg.get("domain") or "").strip()
+        cfg["domain"] = domain
+        save_config(cfg)
+        rewrite_ipsec_leftid(domain)
+        write_secrets()
+        ssl_ok, ssl_note = apply_domain_ssl(old_domain, domain)
+        write_xray_ss_config()
+        write_hysteria_config()
+        write_mtg_config()
+    if ssl_ok:
+        flash("دامنه IKEv2 / L2TP به %s تغییر کرد و گواهی SSL به‌روز شد." % domain)
+    else:
+        extra = (" " + ssl_note) if ssl_note else ""
+        flash(
+            "دامنه %s ذخیره شد اما صدور گواهی SSL ناموفق بود؛ "
+            "باید گواهی Let's Encrypt برای این دامنه صادر شود.%s" % (domain, extra)
+        )
+    return redirect(url_for("settings"))
 
 
 @app.route("/settings/psk", methods=["POST"])
@@ -1845,6 +2493,15 @@ def start_background():
     if getattr(app, "_collector", False):
         return
     app._collector = True
+    # After `multivpn update` the new Reality/VMess/HTTP/mtg inbounds only
+    # exist once we rewrite xray/hysteria/mtg. Skip-if-unchanged inside each
+    # writer keeps live tunnels up when nothing actually changed.
+    try:
+        write_xray_ss_config()
+        write_hysteria_config()
+        write_mtg_config()
+    except Exception:
+        pass
     t = threading.Thread(target=collector_loop, daemon=True)
     t.start()
 
