@@ -5,9 +5,9 @@
 [![AI Smart Connect](https://img.shields.io/badge/AI-Smart%20Connect-d4af37?style=for-the-badge)](https://github.com/navidhaghpanah/multivpn-panel/releases)
 [![Release](https://img.shields.io/github/v/release/navidhaghpanah/multivpn-panel?style=for-the-badge&color=111111)](https://github.com/navidhaghpanah/multivpn-panel/releases)
 
-**AI** با AIaaS ابر آروان رتبهٔ بهترین پروتکل را از موجودی همین VPS و شرایط کلاینت می‌چیند و می‌تواند ترتیب را عوض کند. بدون کلید هم کار می‌کند. نه پروب ISP، نه `napi.arvancloud.ir`.
+**AI** با یک Gateway سازگار با OpenAI رتبهٔ بهترین پروتکل را از موجودی همین VPS و شرایط کلاینت می‌چیند و می‌تواند ترتیب را عوض کند. بدون کلید هم کار می‌کند.
 
-1. در پنل آروان: محصول **AIaaS** → Endpoint چت ارزان (مثلاً GPT-4o-mini)
+1. یک Endpoint چت سازگار با OpenAI بسازید (مدل ارزان، مثلاً GPT-4o-mini)
 2. کپی کنید: **Gateway URL** کامل (معمولاً `/v1`)، **API key**، شناسهٔ دقیق **model**
 3. در پنل: **تنظیمات → اتصال هوشمند — مدل** → ذخیره
 4. صفحهٔ **اتصال هوشمند** — اگر کلید باشد مدل رتبه را چک می‌کند و می‌تواند عوضش کند
@@ -18,7 +18,7 @@
 
 ## امکانات
 
-- **AI** — اتصال هوشمند (Smart Connect) با AIaaS ابر آروان؛ رتبه بدون کلید هم کار می‌کند، مدل می‌تواند ترتیب را عوض کند (نه پروب ISP، نه napi.arvancloud.ir)
+- **AI** — اتصال هوشمند (Smart Connect) با Gateway سازگار با OpenAI؛ رتبه بدون کلید هم کار می‌کند، مدل می‌تواند ترتیب را عوض کند
 - پنل مدیریتی فارسی و واکنش‌گرا با صفحات مستقل داشبورد، کاربران، نشست‌ها، کلاینت‌ها و تنظیمات
 - رابط 3x-ui: سایدبار چپ، تم روشن/تیره، FA/EN، پشتیبان/گزارش/ری‌استارت، و تیک IKEv2/L2TP هنگام ساخت کاربر
 - یک هویت (نام‌کاربری/رمز) مشترک برای IKEv2، L2TP، VLESS Reality، VMess، Shadowsocks، Hysteria2، HTTP proxy و MTProto — هرکدام اختیاری، به‌ازای هر کاربر
@@ -163,7 +163,7 @@ Deploy گیت‌هاب اکشن (`DEPLOY_HOST` / `DEPLOY_USER` / `DEPLOY_SSH_KEY
 ## نویسندگان
 
 - **Navid Haghpanah** — سازنده
-- **Chief of Staff** — پنل، مستندات و انتشار
+- **Grok Bot** — پنل، مستندات و انتشار
 
 صفحهٔ پروژه: GitHub Pages روی شاخه `docs/`.
 
