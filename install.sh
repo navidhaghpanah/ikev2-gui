@@ -354,10 +354,18 @@ net.ipv4.conf.${IFACE}.rp_filter=0
 EOF
 sysctl -p /etc/sysctl.d/99-ikev2-l2tp-gui.conf >/dev/null
 
-iptables -t nat -C POSTROUTING -s 10.8.2.0/24 -o "$IFACE" -j SNAT --to-source "$PUBLIC_IP" 2>/dev/null || \
-  iptables -t nat -A POSTROUTING -s 10.8.2.0/24 -o "$IFACE" -j SNAT --to-source "$PUBLIC_IP"
-iptables -t nat -C POSTROUTING -s 10.8.3.0/24 -o "$IFACE" -j SNAT --to-source "$PUBLIC_IP" 2>/dev/null || \
-  iptables -t nat -A POSTROUTING -s 10.8.3.0/24 -o "$IFACE" -j SNAT --to-source "$PUBLIC_IP"
+# Dedicated NIC with the public IP on it: SNAT. AWS/GCP-style private NIC + Elastic IP: MASQUERADE
+# (SNAT-to-EIP is dropped by source/dest check because ens* only has 172.x/10.x).
+if ip -4 addr show dev "$IFACE" | grep -q "inet ${PUBLIC_IP}/"; then
+  NAT_JUMP="SNAT --to-source $PUBLIC_IP"
+else
+  NAT_JUMP="MASQUERADE"
+  hint "NIC $IFACE has no $PUBLIC_IP (cloud NAT) — using MASQUERADE"
+fi
+iptables -t nat -C POSTROUTING -s 10.8.2.0/24 -o "$IFACE" -j $NAT_JUMP 2>/dev/null || \
+  iptables -t nat -A POSTROUTING -s 10.8.2.0/24 -o "$IFACE" -j $NAT_JUMP
+iptables -t nat -C POSTROUTING -s 10.8.3.0/24 -o "$IFACE" -j $NAT_JUMP 2>/dev/null || \
+  iptables -t nat -A POSTROUTING -s 10.8.3.0/24 -o "$IFACE" -j $NAT_JUMP
 iptables -t mangle -C FORWARD -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --set-mss 1200 2>/dev/null || \
   iptables -t mangle -A FORWARD -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --set-mss 1200
 iptables -C FORWARD -s 10.8.2.0/24 -j ACCEPT 2>/dev/null || iptables -A FORWARD -s 10.8.2.0/24 -j ACCEPT
